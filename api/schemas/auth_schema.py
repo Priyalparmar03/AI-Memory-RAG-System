@@ -1,71 +1,66 @@
 from __future__ import annotations
 
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+)
 
 
 # ==========================================================
-# Chat Request
+# Register
 # ==========================================================
 
-class ChatRequest(BaseModel):
+class RegisterRequest(BaseModel):
 
-    message: str = Field(
+    name: str = Field(
         ...,
-        min_length=1,
-        max_length=10000,
+        min_length=2,
+        max_length=100,
     )
 
-    session_id: Optional[str] = None
+    email: EmailStr
 
-    model: str = Field(
-        default="gemini",
+    password: str = Field(
+        ...,
+        min_length=8,
     )
 
-    temperature: float = Field(
-        default=0.3,
-        ge=0,
-        le=2,
-    )
 
-    stream: bool = False
+# ==========================================================
+# Login
+# ==========================================================
+
+class LoginRequest(BaseModel):
+
+    email: EmailStr
+
+    password: str
 
 
 # ==========================================================
-# Chat Response
+# Token
 # ==========================================================
 
-class ChatResponse(BaseModel):
+class TokenResponse(BaseModel):
 
-    session_id: str
+    access_token: str
 
-    response: str
+    refresh_token: str
 
-    model: str
-
-    latency_ms: float
-
-    tokens_used: int
-
-    sources: List[str] = []
+    token_type: str = "Bearer"
 
 
 # ==========================================================
-# Chat History
+# User
 # ==========================================================
 
-class ChatMessage(BaseModel):
+class UserResponse(BaseModel):
+
+    id: int
+
+    name: str
+
+    email: EmailStr
 
     role: str
-
-    content: str
-
-    timestamp: str
-
-
-class ChatHistory(BaseModel):
-
-    session_id: str
-
-    messages: List[ChatMessage]
