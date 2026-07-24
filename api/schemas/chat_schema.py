@@ -1,11 +1,3 @@
-"""
-app/schemas/chat_schema.py
-
-Chat Schemas
-
-Author: Priyal Parmar
-"""
-
 from __future__ import annotations
 
 from typing import List, Optional
@@ -77,5 +69,3 @@ class ChatHistory(BaseModel):
     session_id: str
 
     messages: List[ChatMessage]
-
-
