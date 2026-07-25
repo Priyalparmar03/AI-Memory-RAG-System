@@ -565,3 +565,302 @@ class DocumentService:
             "embeddings": embeddings,
 
         }
+    # =====================================================
+    # Delete Document
+    # =====================================================
+
+    def delete_document(
+        self,
+        file_path: Path,
+    ) -> bool:
+        """
+        Delete a document from storage.
+        """
+
+        try:
+
+            if file_path.exists():
+
+                file_path.unlink()
+
+                logger.info(
+                    "Deleted document: %s",
+                    file_path.name,
+                )
+
+                return True
+
+            return False
+
+        except Exception as exc:
+
+            logger.exception(exc)
+
+            return False
+
+    # =====================================================
+    # List Documents
+    # =====================================================
+
+    def list_documents(self) -> List[Dict]:
+        """
+        List all uploaded documents.
+        """
+
+        documents = []
+
+        for file in self.upload_folder.iterdir():
+
+            if not file.is_file():
+                continue
+
+            try:
+
+                documents.append(
+                    self.metadata(file)
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed reading metadata for %s",
+                    file.name,
+                )
+
+        return documents
+
+    # =====================================================
+    # Search Documents
+    # =====================================================
+
+    def search_documents(
+        self,
+        keyword: str,
+    ) -> List[Dict]:
+        """
+        Search documents by filename.
+        """
+
+        keyword = keyword.lower()
+
+        results = []
+
+        for document in self.list_documents():
+
+            filename = document["filename"].lower()
+
+            if keyword in filename:
+
+                results.append(document)
+
+        return results
+
+    # =====================================================
+    # Storage Statistics
+    # =====================================================
+
+    def statistics(self) -> Dict:
+        """
+        Storage statistics.
+        """
+
+        documents = self.list_documents()
+
+        total_size = sum(
+
+            doc["size"]
+
+            for doc in documents
+
+        )
+
+        return {
+
+            "documents": len(documents),
+
+            "total_storage_bytes": total_size,
+
+            "total_storage_mb":
+                round(total_size / (1024 * 1024), 2),
+
+            "supported_formats":
+                list(self.SUPPORTED_EXTENSIONS),
+
+        }
+
+    # =====================================================
+    # Health Check
+    # =====================================================
+
+    def health(self) -> Dict:
+        """
+        Verify storage availability.
+        """
+
+        writable = self.upload_folder.exists()
+
+        return {
+
+            "status":
+                "healthy" if writable else "unhealthy",
+
+            "upload_folder":
+                str(self.upload_folder),
+
+            "exists":
+                self.upload_folder.exists(),
+
+            "writable":
+                writable,
+
+        }
+
+    # =====================================================
+    # Cleanup Empty Files
+    # =====================================================
+
+    def cleanup_empty_files(self) -> int:
+        """
+        Remove zero-byte files.
+        """
+
+        removed = 0
+
+        for file in self.upload_folder.iterdir():
+
+            if not file.is_file():
+                continue
+
+            if file.stat().st_size == 0:
+
+                file.unlink()
+
+                removed += 1
+
+        logger.info(
+            "Removed %d empty files.",
+            removed,
+        )
+
+        return removed
+
+    # =====================================================
+    # Clear Upload Directory
+    # =====================================================
+
+    def clear_storage(self):
+        """
+        Delete every uploaded document.
+        """
+
+        removed = 0
+
+        for file in self.upload_folder.iterdir():
+
+            if not file.is_file():
+                continue
+
+            file.unlink()
+
+            removed += 1
+
+        logger.info(
+            "Storage cleared (%d files).",
+            removed,
+        )
+
+        return removed
+
+    # =====================================================
+    # Export Metadata
+    # =====================================================
+
+    def export_metadata(self) -> List[Dict]:
+        """
+        Export metadata for all documents.
+        """
+
+        return self.list_documents()
+
+    # =====================================================
+    # Build Index Payload
+    # =====================================================
+
+    def build_index_payload(
+        self,
+        processed_document: Dict,
+    ) -> List[Dict]:
+        """
+        Convert processed document into
+        a payload ready for RagService.
+        """
+
+        payload = []
+
+        chunks = processed_document["chunks"]
+
+        metadata = processed_document["chunk_metadata"]
+
+        embeddings = processed_document["embeddings"]
+
+        for chunk, meta, embedding in zip(
+            chunks,
+            metadata,
+            embeddings,
+        ):
+
+            payload.append(
+
+                {
+
+                    "content": chunk,
+
+                    "embedding": embedding,
+
+                    "metadata": meta,
+
+                }
+
+            )
+
+        return payload
+
+    # =====================================================
+    # Supported Formats
+    # =====================================================
+
+    @classmethod
+    def supported_formats(cls) -> List[str]:
+        """
+        Return supported extensions.
+        """
+
+        return sorted(
+            cls.SUPPORTED_EXTENSIONS
+        )
+
+    # =====================================================
+    # Service Information
+    # =====================================================
+
+    def info(self) -> Dict:
+        """
+        General service information.
+        """
+
+        return {
+
+            "service": "DocumentService",
+
+            "version": "1.0.0",
+
+            "upload_folder":
+                str(self.upload_folder),
+
+            "supported_formats":
+                self.supported_formats(),
+
+            "max_file_size_mb":
+                self.MAX_FILE_SIZE / (1024 * 1024),
+
+        }
