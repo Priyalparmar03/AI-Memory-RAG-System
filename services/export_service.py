@@ -1066,4 +1066,309 @@ def export_everything(
 
     return data
 
-    
+    # ==========================================================
+# Restore Backup
+# ==========================================================
+
+def restore_backup(
+    self,
+    zip_file: str,
+    destination: Optional[str] = None,
+) -> Path:
+    """
+    Restore exported backup ZIP.
+    """
+
+    zip_path = Path(zip_file)
+
+    if not zip_path.exists():
+        raise FileNotFoundError(
+            f"Backup not found: {zip_file}"
+        )
+
+    if destination is None:
+        destination = (
+            self.export_directory /
+            "restored"
+        )
+
+    destination = Path(destination)
+    destination.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with zipfile.ZipFile(
+        zip_path,
+        "r",
+    ) as archive:
+
+        archive.extractall(destination)
+
+    logger.info(
+        "Backup restored to %s",
+        destination,
+    )
+
+    return destination
+
+    # ==========================================================
+# Cleanup Exports
+# ==========================================================
+
+def cleanup_exports(
+    self,
+    older_than_days: int = 30,
+) -> int:
+    """
+    Delete exports older than the specified number of days.
+    """
+
+    deleted = 0
+
+    cutoff = datetime.now().timestamp() - (
+        older_than_days * 86400
+    )
+
+    for file in self.export_directory.rglob("*"):
+
+        if not file.is_file():
+            continue
+
+        if file.stat().st_mtime < cutoff:
+
+            try:
+
+                file.unlink()
+
+                deleted += 1
+
+            except Exception:
+
+                logger.exception(
+                    "Unable to delete %s",
+                    file,
+                )
+
+    logger.info(
+        "Cleanup complete (%d files removed)",
+        deleted,
+    )
+
+    return deleted
+
+    # ==========================================================
+# Storage Statistics
+# ==========================================================
+
+def storage_statistics(self):
+    """
+    Storage usage statistics.
+    """
+
+    total_files = 0
+    total_size = 0
+
+    by_extension = {}
+
+    for file in self.export_directory.rglob("*"):
+
+        if not file.is_file():
+            continue
+
+        total_files += 1
+
+        size = file.stat().st_size
+
+        total_size += size
+
+        extension = (
+            file.suffix.lower()
+            or "no_extension"
+        )
+
+        by_extension.setdefault(
+            extension,
+            {
+                "count": 0,
+                "size": 0,
+            },
+        )
+
+        by_extension[extension]["count"] += 1
+        by_extension[extension]["size"] += size
+
+    return {
+
+        "total_files": total_files,
+
+        "total_size_bytes": total_size,
+
+        "total_size_mb": round(
+            total_size / (1024 * 1024),
+            2,
+        ),
+
+        "by_extension": by_extension,
+
+    }
+
+    # ==========================================================
+# Diagnostics
+# ==========================================================
+
+def diagnostics(self):
+    """
+    Service diagnostics.
+    """
+
+    diagnostics = {
+
+        "service": "ExportService",
+
+        "status": "healthy",
+
+        "export_directory": str(
+            self.export_directory.resolve()
+        ),
+
+        "directory_exists":
+            self.export_directory.exists(),
+
+        "directory_writable":
+            os.access(
+                self.export_directory,
+                os.W_OK,
+            ),
+
+        "dashboard":
+            self.dashboard(),
+
+        "storage":
+            self.storage_statistics(),
+
+    }
+
+    return diagnostics
+
+    # ==========================================================
+# Reset Service
+# ==========================================================
+
+def reset(self):
+    """
+    Remove every exported file.
+    """
+
+    if self.export_directory.exists():
+
+        shutil.rmtree(
+            self.export_directory
+        )
+
+    self.export_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    logger.warning(
+        "Export directory reset."
+    )
+
+
+    # ==========================================================
+# Service Information
+# ==========================================================
+
+def info(self):
+    """
+    Service metadata.
+    """
+
+    return {
+
+        "service":
+            "ExportService",
+
+        "version":
+            "1.0.0",
+
+        "formats": [
+
+            "json",
+
+            "markdown",
+
+            "html",
+
+            "pdf",
+
+            "docx",
+
+            "csv",
+
+            "zip",
+
+        ],
+
+        "directory":
+            str(
+                self.export_directory
+            ),
+
+    }
+
+    # ==========================================================
+# Health
+# ==========================================================
+
+def health(self):
+    """
+    Service health.
+    """
+
+    healthy = (
+        self.export_directory.exists()
+        and
+        os.access(
+            self.export_directory,
+            os.W_OK,
+        )
+    )
+
+    return {
+
+        "status":
+            "healthy"
+            if healthy
+            else "unhealthy",
+
+        "directory":
+            str(
+                self.export_directory
+            ),
+
+        "dashboard":
+            self.dashboard(),
+
+        "storage":
+            self.storage_statistics(),
+
+    }
+
+# ==========================================================
+# Shutdown
+# ==========================================================
+
+def close(self):
+    """
+    Gracefully shutdown ExportService.
+    """
+
+    logger.info(
+        "Closing ExportService..."
+    )
+
+    logger.info(
+        "ExportService shutdown complete."
+    )
