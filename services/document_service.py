@@ -15,7 +15,9 @@ Responsibilities
 """
 
 from __future__ import annotations
-
+import re
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from services.embedding_service import EmbeddingService
 import hashlib
 import logging
 import mimetypes
@@ -24,7 +26,6 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
-
 import pandas as pd
 import pdfplumber
 from bs4 import BeautifulSoup
@@ -357,3 +358,210 @@ class DocumentService:
         return soup.get_text(
             separator="\n",
         )
+
+    # =====================================================
+    # Clean Text
+    # =====================================================
+
+    @staticmethod
+    def clean_text(text: str) -> str:
+        """
+        Clean extracted text.
+        """
+
+        if not text:
+            return ""
+
+        # Normalize line endings
+        text = text.replace("\r\n", "\n")
+        text = text.replace("\r", "\n")
+
+        # Remove excessive spaces
+        text = re.sub(r"[ \t]+", " ", text)
+
+        # Remove excessive blank lines
+        text = re.sub(r"\n{3,}", "\n\n", text)
+
+        return text.strip()
+
+    # =====================================================
+    # Create Text Splitter
+    # =====================================================
+
+    @staticmethod
+    def create_splitter(
+        chunk_size: int = 800,
+        chunk_overlap: int = 150,
+    ) -> RecursiveCharacterTextSplitter:
+        """
+        Create Recursive Character Splitter.
+        """
+
+        return RecursiveCharacterTextSplitter(
+
+            chunk_size=chunk_size,
+
+            chunk_overlap=chunk_overlap,
+
+            separators=[
+                "\n\n",
+                "\n",
+                ". ",
+                " ",
+                "",
+            ],
+        )
+
+    # =====================================================
+    # Chunk Document
+    # =====================================================
+
+    def chunk_text(
+        self,
+        text: str,
+        chunk_size: int = 800,
+        chunk_overlap: int = 150,
+    ) -> List[str]:
+        """
+        Split text into chunks.
+        """
+
+        splitter = self.create_splitter(
+
+            chunk_size=chunk_size,
+
+            chunk_overlap=chunk_overlap,
+
+        )
+
+        return splitter.split_text(text)
+
+    # =====================================================
+    # Build Chunk Metadata
+    # =====================================================
+
+    def build_chunk_metadata(
+        self,
+        document_id: str,
+        filename: str,
+        chunks: List[str],
+    ) -> List[Dict]:
+        """
+        Create metadata for each chunk.
+        """
+
+        metadata = []
+
+        total = len(chunks)
+
+        for index, chunk in enumerate(chunks):
+
+            metadata.append(
+
+                {
+
+                    "document_id": document_id,
+
+                    "filename": filename,
+
+                    "chunk_id": index,
+
+                    "chunk_index": index,
+
+                    "total_chunks": total,
+
+                    "characters": len(chunk),
+
+                    "words": len(chunk.split()),
+
+                }
+
+            )
+
+        return metadata
+
+    # =====================================================
+    # Duplicate Detection
+    # =====================================================
+
+    def is_duplicate(
+        self,
+        file_path: Path,
+        existing_checksums: List[str],
+    ) -> bool:
+        """
+        Detect duplicate documents.
+        """
+
+        checksum = self.checksum(file_path)
+
+        return checksum in existing_checksums
+
+    # =====================================================
+    # Generate Embeddings
+    # =====================================================
+
+    def generate_embeddings(
+        self,
+        chunks: List[str],
+    ):
+        """
+        Generate embeddings for chunks.
+        """
+
+        embedding_service = EmbeddingService()
+
+        return embedding_service.embed_documents(chunks)
+
+    # =====================================================
+    # Process Document
+    # =====================================================
+
+    def process_document(
+        self,
+        file_path: Path,
+    ) -> Dict:
+        """
+        Complete document processing pipeline.
+        """
+
+        logger.info(
+            "Processing %s",
+            file_path.name,
+        )
+
+        self.validate_file(file_path)
+
+        metadata = self.metadata(file_path)
+
+        text = self.extract_text(file_path)
+
+        text = self.clean_text(text)
+
+        chunks = self.chunk_text(text)
+
+        embeddings = self.generate_embeddings(chunks)
+
+        chunk_metadata = self.build_chunk_metadata(
+
+            document_id=self.generate_document_id(),
+
+            filename=file_path.name,
+
+            chunks=chunks,
+
+        )
+
+        return {
+
+            "metadata": metadata,
+
+            "text": text,
+
+            "chunks": chunks,
+
+            "chunk_metadata": chunk_metadata,
+
+            "embeddings": embeddings,
+
+        }
