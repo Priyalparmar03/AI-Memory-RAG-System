@@ -747,3 +747,441 @@ def seed_memory(
 
     )
 
+# ======================================================
+# Documents
+# ======================================================
+
+def seed_documents(
+    self,
+    users,
+    per_user: int = 3,
+):
+
+    print("Creating documents...")
+
+    documents = []
+
+    categories = [
+
+        "Research Paper",
+        "Documentation",
+        "Tutorial",
+        "Manual",
+        "Guide",
+        "Notes",
+
+    ]
+
+    for user in users:
+
+        for _ in range(per_user):
+
+            document_id = self.random_uuid()
+
+            filename = fake.file_name(
+                extension="pdf"
+            )
+
+            created = self.random_date()
+
+            self.db.insert(
+
+                """
+                INSERT INTO documents(
+
+                    document_id,
+                    user_id,
+                    filename,
+                    category,
+                    created_at
+
+                )
+
+                VALUES(?,?,?,?,?)
+
+                """,
+
+                (
+
+                    document_id,
+                    user["id"],
+                    filename,
+                    random.choice(categories),
+                    created.isoformat(),
+
+                ),
+
+            )
+
+            documents.append(
+
+                {
+
+                    "id": document_id,
+                    "user": user["id"],
+
+                }
+
+            )
+
+    print(f"Created {len(documents)} documents.")
+
+    return documents
+
+# ======================================================
+# Document Chunks
+# ======================================================
+
+def seed_document_chunks(
+    self,
+    documents,
+):
+
+    print("Creating document chunks...")
+
+    total = 0
+
+    for document in documents:
+
+        chunk_count = random.randint(5, 15)
+
+        for index in range(chunk_count):
+
+            self.db.insert(
+
+                """
+                INSERT INTO document_chunks(
+
+                    document_id,
+                    chunk_index,
+                    content,
+                    created_at
+
+                )
+
+                VALUES(?,?,?,?)
+
+                """,
+
+                (
+
+                    document["id"],
+                    index,
+
+                    fake.paragraph(
+                        nb_sentences=6
+                    ),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} chunks.")
+
+# ======================================================
+# Chat Events
+# ======================================================
+
+def seed_chat_events(
+    self,
+    users,
+):
+
+    print("Creating chat events...")
+
+    events = [
+
+        "message_sent",
+        "conversation_created",
+        "document_uploaded",
+        "search",
+        "memory_saved",
+
+    ]
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(15, 40)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO chat_events(
+
+                    user_id,
+                    event_type,
+                    created_at
+
+                )
+
+                VALUES(?,?,?)
+
+                """,
+
+                (
+
+                    user["id"],
+
+                    random.choice(events),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} chat events.")
+
+# ======================================================
+# Token Usage
+# ======================================================
+
+def seed_token_usage(
+    self,
+    users,
+):
+
+    print("Creating token usage...")
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(25, 60)):
+
+            prompt = random.randint(
+                100,
+                1500,
+            )
+
+            completion = random.randint(
+                50,
+                1200,
+            )
+
+            self.db.insert(
+
+                """
+                INSERT INTO token_usage(
+
+                    user_id,
+                    prompt_tokens,
+                    completion_tokens,
+                    total_tokens,
+                    created_at
+
+                )
+
+                VALUES(?,?,?,?,?)
+
+                """,
+
+                (
+
+                    user["id"],
+
+                    prompt,
+
+                    completion,
+
+                    prompt + completion,
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} token records.")
+
+# ======================================================
+# Latency
+# ======================================================
+
+def seed_latency(
+    self,
+    users,
+):
+
+    print("Creating latency...")
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(20, 40)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO latency(
+
+                    user_id,
+                    latency_ms,
+                    created_at
+
+                )
+
+                VALUES(?,?,?)
+
+                """,
+
+                (
+
+                    user["id"],
+
+                    round(
+                        random.uniform(
+                            50,
+                            2500,
+                        ),
+                        2,
+                    ),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} latency records.")
+
+# ======================================================
+# Model Usage
+# ======================================================
+
+def seed_model_usage(
+    self,
+    users,
+):
+
+    print("Creating model usage...")
+
+    models = [
+
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gpt-4.1",
+        "llama3",
+        "mistral",
+
+    ]
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(15, 40)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO model_usage(
+
+                    user_id,
+                    model_name,
+                    created_at
+
+                )
+
+                VALUES(?,?,?)
+
+                """,
+
+                (
+
+                    user["id"],
+
+                    random.choice(models),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} model usage records.")
+
+# ======================================================
+# RAG Queries
+# ======================================================
+
+def seed_rag_queries(
+    self,
+    users,
+):
+
+    print("Creating RAG queries...")
+
+    queries = [
+
+        "Explain RAG",
+        "Vector databases",
+        "LangChain",
+        "Docker",
+        "Machine Learning",
+        "Deep Learning",
+        "Embeddings",
+
+    ]
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(8, 25)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO rag_queries(
+
+                    user_id,
+                    query,
+                    similarity_score,
+                    created_at
+
+                )
+
+                VALUES(?,?,?,?)
+
+                """,
+
+                (
+
+                    user["id"],
+
+                    random.choice(queries),
+
+                    round(
+                        random.uniform(
+                            0.65,
+                            0.99,
+                        ),
+                        3,
+                    ),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} RAG queries.")
+
