@@ -1185,3 +1185,323 @@ def seed_rag_queries(
 
     print(f"Created {total} RAG queries.")
 
+# ======================================================
+# Export History
+# ======================================================
+
+def seed_exports(
+    self,
+    users,
+):
+    """
+    Seed export history.
+    """
+
+    print("Creating export history...")
+
+    formats = [
+        "json",
+        "pdf",
+        "docx",
+        "html",
+        "csv",
+        "zip",
+    ]
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(5, 15)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO exports(
+
+                    user_id,
+                    filename,
+                    format,
+                    created_at
+
+                )
+
+                VALUES(
+                    ?,?,?,?
+                )
+                """,
+
+                (
+
+                    user["id"],
+
+                    fake.file_name(),
+
+                    random.choice(formats),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} exports.")
+
+# ======================================================
+# Cost Analytics
+# ======================================================
+
+def seed_costs(
+    self,
+    users,
+):
+    """
+    Seed API cost analytics.
+    """
+
+    print("Creating cost analytics...")
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(15, 40)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO costs(
+
+                    user_id,
+                    provider,
+                    model_name,
+                    amount,
+                    created_at
+
+                )
+
+                VALUES(
+                    ?,?,?,?,?
+                )
+                """,
+
+                (
+
+                    user["id"],
+
+                    random.choice(
+                        [
+                            "OpenAI",
+                            "Google",
+                            "Anthropic",
+                        ]
+                    ),
+
+                    random.choice(
+                        [
+                            "gpt-4.1",
+                            "gemini-2.5-pro",
+                            "claude-4",
+                        ]
+                    ),
+
+                    round(
+                        random.uniform(
+                            0.001,
+                            2.5,
+                        ),
+                        4,
+                    ),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} cost records.")
+
+
+# ======================================================
+# Memory Usage
+# ======================================================
+
+def seed_memory_usage(
+    self,
+    users,
+):
+    """
+    Seed memory usage analytics.
+    """
+
+    print("Creating memory usage...")
+
+    total = 0
+
+    for user in users:
+
+        for _ in range(random.randint(8, 20)):
+
+            self.db.insert(
+
+                """
+                INSERT INTO memory_usage(
+
+                    user_id,
+                    memory_count,
+                    storage_bytes,
+                    created_at
+
+                )
+
+                VALUES(
+                    ?,?,?,?
+                )
+                """,
+
+                (
+
+                    user["id"],
+
+                    random.randint(
+                        5,
+                        200,
+                    ),
+
+                    random.randint(
+                        1024,
+                        100000,
+                    ),
+
+                    self.random_date().isoformat(),
+
+                ),
+
+            )
+
+            total += 1
+
+    print(f"Created {total} memory usage records.")
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(self):
+
+    print()
+
+    print("=" * 70)
+
+    print("DATABASE SUMMARY")
+
+    print("=" * 70)
+
+    tables = [
+
+        "users",
+
+        "sessions",
+
+        "conversations",
+
+        "messages",
+
+        "memory",
+
+        "documents",
+
+        "document_chunks",
+
+        "chat_events",
+
+        "token_usage",
+
+        "latency",
+
+        "model_usage",
+
+        "rag_queries",
+
+        "exports",
+
+        "costs",
+
+        "memory_usage",
+
+    ]
+
+    for table in tables:
+
+        if self.db.table_exists(table):
+
+            rows = self.db.count(table)
+
+            print(
+
+                f"{table:<25}{rows:>10}"
+
+            )
+
+    print("=" * 70)
+
+documents = self.seed_documents(users)
+
+self.seed_document_chunks(
+    documents
+)
+
+self.seed_chat_events(users)
+
+self.seed_token_usage(users)
+
+self.seed_latency(users)
+
+self.seed_model_usage(users)
+
+self.seed_rag_queries(users)
+
+self.seed_exports(users)
+
+self.seed_costs(users)
+
+self.seed_memory_usage(users)
+
+self.summary()
+
+print()
+
+print(
+    "Database seeded successfully."
+)
+
+# ======================================================
+# Main
+# ======================================================
+
+if __name__ == "__main__":
+
+    try:
+
+        DatabaseSeeder().run()
+
+    except KeyboardInterrupt:
+
+        print()
+
+        print("Seeder cancelled.")
+
+    except Exception as exc:
+
+        print()
+
+        print("Seeder failed:")
+
+        print(exc)
+
+        raise
