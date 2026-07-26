@@ -272,3 +272,565 @@ class Database:
             logger.info(
                 "Database connection closed."
             )
+    
+    # =====================================================
+    # Execute Query
+    # =====================================================
+    
+    def execute(
+        self,
+        query: str,
+        parameters: tuple = (),
+    ) -> sqlite3.Cursor:
+        """
+        Execute a single SQL query.
+        """
+    
+        with self.cursor() as cursor:
+    
+            cursor.execute(
+                query,
+                parameters,
+            )
+    
+            return cursor
+    
+    
+    # =====================================================
+    # Execute Many
+    # =====================================================
+    
+    def executemany(
+        self,
+        query: str,
+        parameters: list[tuple],
+    ) -> None:
+        """
+        Execute multiple SQL statements.
+        """
+    
+        with self.cursor() as cursor:
+    
+            cursor.executemany(
+                query,
+                parameters,
+            )
+    
+        logger.info(
+            "Executed %d statements.",
+            len(parameters),
+        )
+    
+    
+    # =====================================================
+    # Fetch One
+    # =====================================================
+    
+    def fetchone(
+        self,
+        query: str,
+        parameters: tuple = (),
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Execute query and return one row.
+        """
+    
+        connection = self.connect()
+    
+        cursor = connection.cursor()
+    
+        try:
+    
+            cursor.execute(
+                query,
+                parameters,
+            )
+    
+            row = cursor.fetchone()
+    
+            if row is None:
+                return None
+    
+            return dict(row)
+    
+        finally:
+    
+            cursor.close()
+    
+    
+    # =====================================================
+    # Fetch All
+    # =====================================================
+    
+    def fetchall(
+        self,
+        query: str,
+        parameters: tuple = (),
+    ) -> list[Dict[str, Any]]:
+        """
+        Execute query and return all rows.
+        """
+    
+        connection = self.connect()
+    
+        cursor = connection.cursor()
+    
+        try:
+    
+            cursor.execute(
+                query,
+                parameters,
+            )
+    
+            rows = cursor.fetchall()
+    
+            return [
+                dict(row)
+                for row in rows
+            ]
+    
+        finally:
+    
+            cursor.close()
+
+    # =====================================================
+    # Fetch Value
+    # =====================================================
+    
+    def fetch_value(
+        self,
+        query: str,
+        parameters: tuple = (),
+    ):
+        """
+        Return first column of first row.
+        """
+    
+        connection = self.connect()
+    
+        cursor = connection.cursor()
+    
+        try:
+    
+            cursor.execute(
+                query,
+                parameters,
+            )
+    
+            row = cursor.fetchone()
+    
+            if row is None:
+                return None
+    
+            return row[0]
+    
+        finally:
+    
+            cursor.close()
+            
+
+# =====================================================
+# Insert
+# =====================================================
+
+def insert(
+    self,
+    query: str,
+    parameters: tuple,
+) -> int:
+    """
+    Execute INSERT statement.
+
+    Returns inserted row id.
+    """
+
+    with self.cursor() as cursor:
+
+        cursor.execute(
+            query,
+            parameters,
+        )
+
+        return cursor.lastrowid
+
+
+# =====================================================
+# Update
+# =====================================================
+
+def update(
+    self,
+    query: str,
+    parameters: tuple,
+) -> int:
+    """
+    Execute UPDATE.
+
+    Returns affected rows.
+    """
+
+    with self.cursor() as cursor:
+
+        cursor.execute(
+            query,
+            parameters,
+        )
+
+        return cursor.rowcount
+
+# =====================================================
+# Delete
+# =====================================================
+
+def delete(
+    self,
+    query: str,
+    parameters: tuple,
+) -> int:
+    """
+    Execute DELETE.
+
+    Returns affected rows.
+    """
+
+    with self.cursor() as cursor:
+
+        cursor.execute(
+            query,
+            parameters,
+        )
+
+        return cursor.rowcount
+
+# =====================================================
+# Exists
+# =====================================================
+
+def exists(
+    self,
+    query: str,
+    parameters: tuple = (),
+) -> bool:
+    """
+    Return True if at least one record exists.
+    """
+
+    result = self.fetch_value(
+        query,
+        parameters,
+    )
+
+    return result is not None
+
+# =====================================================
+# Transaction
+# =====================================================
+
+@contextmanager
+def transaction(self):
+    """
+    Context manager for database transactions.
+
+    Usage:
+        with db.transaction() as cursor:
+            cursor.execute(...)
+            cursor.execute(...)
+    """
+
+    connection = self.connect()
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute("BEGIN")
+
+        yield cursor
+
+        connection.commit()
+
+        logger.debug(
+            "Transaction committed."
+        )
+
+    except Exception:
+
+        connection.rollback()
+
+        logger.exception(
+            "Transaction rolled back."
+        )
+
+        raise
+
+    finally:
+
+        cursor.close()
+
+
+# =====================================================
+# Execute With Retry
+# =====================================================
+
+def execute_retry(
+    self,
+    query: str,
+    parameters: tuple = (),
+    retries: int = 3,
+    delay: float = 0.5,
+):
+    """
+    Retry SQL execution if database is locked.
+    """
+
+    import time
+
+    last_exception = None
+
+    for attempt in range(retries):
+
+        try:
+
+            return self.execute(
+                query,
+                parameters,
+            )
+
+        except sqlite3.OperationalError as exc:
+
+            last_exception = exc
+
+            if "locked" not in str(exc).lower():
+
+                raise
+
+            logger.warning(
+
+                "Database locked. Retry %d/%d",
+
+                attempt + 1,
+
+                retries,
+
+            )
+
+            time.sleep(delay)
+
+    raise last_exception
+
+# =====================================================
+# Bulk Insert
+# =====================================================
+
+def bulk_insert(
+    self,
+    query: str,
+    rows: list[tuple],
+) -> int:
+    """
+    Insert multiple rows.
+
+    Returns number of inserted rows.
+    """
+
+    if not rows:
+        return 0
+
+    self.executemany(
+        query,
+        rows,
+    )
+
+    return len(rows)
+
+
+
+# =====================================================
+# Pagination
+# =====================================================
+
+def fetch_page(
+    self,
+    query: str,
+    page: int = 1,
+    page_size: int = 25,
+    parameters: tuple = (),
+):
+    """
+    Fetch paginated results.
+    """
+
+    offset = (page - 1) * page_size
+
+    query = (
+        query +
+        " LIMIT ? OFFSET ?"
+    )
+
+    parameters = (
+        *parameters,
+        page_size,
+        offset,
+    )
+
+    return self.fetchall(
+        query,
+        parameters,
+    )
+
+
+
+# =====================================================
+# Count
+# =====================================================
+
+def count(
+    self,
+    table: str,
+) -> int:
+    """
+    Count rows in table.
+    """
+
+    return self.fetch_value(
+        f"SELECT COUNT(*) FROM {table}"
+    )
+
+# =====================================================
+# Table Exists
+# =====================================================
+
+def table_exists(
+    self,
+    table_name: str,
+) -> bool:
+    """
+    Check whether table exists.
+    """
+
+    result = self.fetch_value(
+
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type='table'
+        AND name=?
+        """,
+
+        (table_name,),
+    )
+
+    return result is not None
+
+
+# =====================================================
+# List Tables
+# =====================================================
+
+def list_tables(self):
+    """
+    Return all database tables.
+    """
+
+    rows = self.fetchall(
+
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type='table'
+        ORDER BY name
+        """
+
+    )
+
+    return [
+
+        row["name"]
+
+        for row in rows
+
+    ]
+
+
+# =====================================================
+# Database Size
+# =====================================================
+
+def database_size(self):
+    """
+    Return database size.
+    """
+
+    if not self.database_path.exists():
+
+        return 0
+
+    return self.database_path.stat().st_size
+
+
+
+# =====================================================
+# Last Insert ID
+# =====================================================
+
+def last_insert_id(self):
+    """
+    Return SQLite last inserted row id.
+    """
+
+    return self.fetch_value(
+
+        """
+        SELECT last_insert_rowid()
+        """
+
+    )
+
+
+# =====================================================
+# Execute Script
+# =====================================================
+
+def execute_script(
+    self,
+    script: str,
+):
+    """
+    Execute SQL script.
+    """
+
+    connection = self.connect()
+
+    connection.executescript(
+        script
+    )
+
+    connection.commit()
+
+    logger.info(
+        "SQL script executed."
+    )
+
+with db.transaction() as cursor:
+
+    cursor.execute(
+
+        """
+        INSERT INTO users(name)
+        VALUES(?)
+        """,
+
+        ("Priyal",)
+
+    )
+
+    cursor.execute(
+
+        """
+        INSERT INTO users(name)
+        VALUES(?)
+        """,
+
+        ("OpenAI",)
+
+    )
+
