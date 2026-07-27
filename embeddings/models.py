@@ -898,3 +898,256 @@ class EmbeddingModelManager:
     def cpu_available() -> bool:
 
         return True
+
+    # ======================================================
+    # Reset Manager
+    # ======================================================
+
+    def reset(self) -> None:
+        """
+        Reset the manager to its default state.
+        """
+
+        logger.info("Resetting EmbeddingModelManager...")
+
+        self.unload_model()
+
+        self.model_name = self.DEFAULT_MODEL
+
+        self.device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "cpu"
+        )
+
+        logger.info(
+            "Reset complete. Using model=%s device=%s",
+            self.model_name,
+            self.device,
+        )
+
+    # ======================================================
+    # Clear CUDA Cache
+    # ======================================================
+
+    def clear_gpu_cache(self) -> None:
+        """
+        Release unused CUDA memory.
+        """
+
+        if torch.cuda.is_available():
+
+            torch.cuda.empty_cache()
+
+            logger.info("CUDA cache cleared.")
+
+    # ======================================================
+    # Garbage Collection
+    # ======================================================
+
+    @staticmethod
+    def collect_garbage() -> None:
+        """
+        Run Python garbage collection.
+        """
+
+        import gc
+
+        gc.collect()
+
+        if torch.cuda.is_available():
+
+            torch.cuda.empty_cache()
+
+    # ======================================================
+    # Model Summary
+    # ======================================================
+
+    def summary(self) -> dict:
+        """
+        Human-readable summary.
+        """
+
+        info = self.model_info()
+
+        return {
+
+            "name": info.name,
+
+            "description": info.description,
+
+            "dimension": info.dimension,
+
+            "multilingual": info.multilingual,
+
+            "max_sequence_length": info.max_sequence_length,
+
+            "normalized": info.normalized,
+
+            "device": self.device,
+
+            "gpu": self.using_gpu,
+
+        }
+
+    # ======================================================
+    # Export Configuration
+    # ======================================================
+
+    def export_configuration(self) -> dict:
+        """
+        Export current configuration.
+        """
+
+        return {
+
+            "model": self.model_name,
+
+            "device": self.device,
+
+            "cache_folder": (
+                str(self.cache_folder)
+                if self.cache_folder
+                else None
+            ),
+
+        }
+
+    # ======================================================
+    # Import Configuration
+    # ======================================================
+
+    def import_configuration(
+        self,
+        config: dict,
+    ) -> None:
+        """
+        Restore configuration.
+        """
+
+        self.model_name = config.get(
+            "model",
+            self.DEFAULT_MODEL,
+        )
+
+        self.device = config.get(
+            "device",
+            self.device,
+        )
+
+        cache = config.get("cache_folder")
+
+        self.cache_folder = (
+            Path(cache)
+            if cache
+            else None
+        )
+
+        self.reload_model()
+
+    # ======================================================
+    # Compare Models
+    # ======================================================
+
+    def compare_models(
+        self,
+        first: str,
+        second: str,
+    ) -> dict:
+        """
+        Compare two registered models.
+        """
+
+        if not self.model_exists(first):
+
+            raise EmbeddingModelError(first)
+
+        if not self.model_exists(second):
+
+            raise EmbeddingModelError(second)
+
+        model_a = self.model_info(first)
+
+        model_b = self.model_info(second)
+
+        return {
+
+            "first": model_a,
+
+            "second": model_b,
+
+            "dimension_difference": (
+
+                model_a.dimension
+                - model_b.dimension
+
+            ),
+
+            "same_dimension": (
+
+                model_a.dimension
+                == model_b.dimension
+
+            ),
+
+        }
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(self) -> None:
+        """
+        Release resources.
+        """
+
+        logger.info(
+            "Closing EmbeddingModelManager..."
+        )
+
+        self.unload_model()
+
+        self.collect_garbage()
+
+        logger.info(
+            "EmbeddingModelManager closed."
+        )
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # Representation
+    # ======================================================
+
+    def __repr__(self) -> str:
+
+        return (
+
+            "EmbeddingModelManager("
+
+            f"model='{self.model_name}', "
+
+            f"device='{self.device}', "
+
+            f"gpu={self.using_gpu}, "
+
+            f"dimension={self.dimension}"
+
+            ")"
+
+        )
