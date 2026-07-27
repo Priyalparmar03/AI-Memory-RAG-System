@@ -537,3 +537,306 @@ class EmbeddingService:
             dtype=np.float32,
 
         )
+
+    ####################################################################
+    # Similarity
+    ####################################################################
+
+    @staticmethod
+    def cosine_similarity(
+        vector1: np.ndarray,
+        vector2: np.ndarray,
+    ) -> float:
+        """
+        Compute cosine similarity between two vectors.
+        """
+
+        vector1 = vector1.reshape(1, -1)
+        vector2 = vector2.reshape(1, -1)
+
+        return float(
+            cosine_similarity(
+                vector1,
+                vector2,
+            )[0][0]
+        )
+
+    ####################################################################
+    # Similarity Matrix
+    ####################################################################
+
+    @staticmethod
+    def similarity_matrix(
+        vectors: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Compute pairwise cosine similarity matrix.
+        """
+
+        return cosine_similarity(vectors)
+
+    ####################################################################
+    # Most Similar
+    ####################################################################
+
+    def most_similar(
+        self,
+        query: str,
+        documents: Sequence[str],
+        top_k: int = 5,
+    ):
+        """
+        Return top-k most similar documents.
+        """
+
+        if top_k <= 0:
+            raise EmbeddingError(
+                "top_k must be greater than zero."
+            )
+
+        query_vector = self.embed_query(query)
+
+        doc_vectors = self.embed_documents(documents)
+
+        scores = cosine_similarity(
+            query_vector.reshape(1, -1),
+            doc_vectors,
+        )[0]
+
+        ranked = sorted(
+            zip(documents, scores),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+
+        return ranked[:top_k]
+
+    ####################################################################
+    # Search
+    ####################################################################
+
+    def search(
+        self,
+        query: str,
+        documents: Sequence[str],
+        top_k: int = 5,
+    ):
+        """
+        Alias of most_similar().
+        """
+
+        return self.most_similar(
+            query=query,
+            documents=documents,
+            top_k=top_k,
+        )
+
+    ####################################################################
+    # Distance
+    ####################################################################
+
+    @staticmethod
+    def euclidean_distance(
+        vector1: np.ndarray,
+        vector2: np.ndarray,
+    ) -> float:
+
+        return float(
+            np.linalg.norm(
+                vector1 - vector2
+            )
+        )
+
+    ####################################################################
+    # Dot Product
+    ####################################################################
+
+    @staticmethod
+    def dot_product(
+        vector1: np.ndarray,
+        vector2: np.ndarray,
+    ) -> float:
+
+        return float(
+            np.dot(
+                vector1,
+                vector2,
+            )
+        )
+
+    ####################################################################
+    # Save Embeddings
+    ####################################################################
+
+    @staticmethod
+    def save_embeddings(
+        embeddings: np.ndarray,
+        path: Union[str, Path],
+    ) -> Path:
+        """
+        Save embeddings as .npy file.
+        """
+
+        path = Path(path)
+
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        np.save(
+            path,
+            embeddings,
+        )
+
+        logger.info(
+            "Embeddings saved to %s",
+            path,
+        )
+
+        return path
+
+    ####################################################################
+    # Load Embeddings
+    ####################################################################
+
+    @staticmethod
+    def load_embeddings(
+        path: Union[str, Path],
+    ) -> np.ndarray:
+        """
+        Load embeddings from disk.
+        """
+
+        path = Path(path)
+
+        if not path.exists():
+
+            raise FileNotFoundError(path)
+
+        return np.load(path)
+
+    ####################################################################
+    # Save Metadata
+    ####################################################################
+
+    @staticmethod
+    def save_metadata(
+        metadata: dict,
+        path: Union[str, Path],
+    ):
+
+        import json
+
+        path = Path(path)
+
+        with open(
+            path,
+            "w",
+            encoding="utf8",
+        ) as f:
+
+            json.dump(
+                metadata,
+                f,
+                indent=4,
+            )
+
+    ####################################################################
+    # Load Metadata
+    ####################################################################
+
+    @staticmethod
+    def load_metadata(
+        path: Union[str, Path],
+    ):
+
+        import json
+
+        with open(
+            path,
+            encoding="utf8",
+        ) as f:
+
+            return json.load(f)
+
+    ####################################################################
+    # Validate Vector
+    ####################################################################
+
+    def validate_vector(
+        self,
+        vector: np.ndarray,
+    ) -> bool:
+
+        if not isinstance(
+            vector,
+            np.ndarray,
+        ):
+            return False
+
+        return (
+            len(vector)
+            == self.embedding_dimension
+        )
+
+    ####################################################################
+    # Validate Matrix
+    ####################################################################
+
+    def validate_matrix(
+        self,
+        matrix: np.ndarray,
+    ) -> bool:
+
+        if matrix.ndim != 2:
+            return False
+
+        return (
+            matrix.shape[1]
+            == self.embedding_dimension
+        )
+
+    ####################################################################
+    # Convert to List
+    ####################################################################
+
+    @staticmethod
+    def to_list(
+        vector: np.ndarray,
+    ):
+
+        return vector.tolist()
+
+    ####################################################################
+    # Convert to NumPy
+    ####################################################################
+
+    @staticmethod
+    def to_numpy(
+        vector,
+    ):
+
+        return np.asarray(
+            vector,
+            dtype=np.float32,
+        )
+
+    ####################################################################
+    # Batch Generator
+    ####################################################################
+
+    def batches(
+        self,
+        texts: Sequence[str],
+    ):
+
+        for i in range(
+            0,
+            len(texts),
+            self.batch_size,
+        ):
+
+            yield texts[
+                i : i + self.batch_size
+            ]
