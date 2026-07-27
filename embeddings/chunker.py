@@ -1,24 +1,3 @@
-"""
-embeddings/chunker.py
-=====================
-
-Production Semantic Chunker
-
-Features
---------
-- Fixed-size chunking
-- Sentence chunking
-- Paragraph chunking
-- Sliding window
-- Overlap support
-- Metadata generation
-- Chunk validation
-- Statistics
-- Logging
-
-Author: Priyal Parmar
-"""
-
 from __future__ import annotations
 
 import logging
