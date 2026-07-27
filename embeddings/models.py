@@ -588,3 +588,313 @@ class EmbeddingModelManager:
     def registry(self):
 
         return self.MODEL_REGISTRY.copy()
+
+    # ======================================================
+    # Health Check
+    # ======================================================
+
+    def health(self) -> dict:
+        """
+        Perform a health check on the currently loaded model.
+        """
+
+        try:
+
+            model = self.model
+
+            return {
+
+                "status": "healthy",
+
+                "model": self.model_name,
+
+                "device": self.device,
+
+                "dimension": model.get_sentence_embedding_dimension(),
+
+                "gpu": self.using_gpu,
+
+            }
+
+        except Exception as exc:
+
+            logger.exception(exc)
+
+            return {
+
+                "status": "failed",
+
+                "error": str(exc),
+
+            }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(self) -> dict:
+        """
+        Complete diagnostics report.
+        """
+
+        return {
+
+            "health": self.health(),
+
+            "configuration": self.configuration(),
+
+            "memory": self.memory_usage(),
+
+            "runtime": self.runtime_statistics(),
+
+            "installed_models": self.installed_models(),
+
+        }
+
+    # ======================================================
+    # GPU / Memory Statistics
+    # ======================================================
+
+    def memory_usage(self) -> dict:
+        """
+        GPU/CPU memory information.
+        """
+
+        stats = {
+
+            "device": self.device,
+
+            "gpu_enabled": self.using_gpu,
+
+        }
+
+        if torch.cuda.is_available():
+
+            stats.update(
+
+                {
+
+                    "allocated_mb": round(
+
+                        torch.cuda.memory_allocated()
+
+                        / (1024 ** 2),
+
+                        2,
+
+                    ),
+
+                    "reserved_mb": round(
+
+                        torch.cuda.memory_reserved()
+
+                        / (1024 ** 2),
+
+                        2,
+
+                    ),
+
+                    "max_allocated_mb": round(
+
+                        torch.cuda.max_memory_allocated()
+
+                        / (1024 ** 2),
+
+                        2,
+
+                    ),
+
+                }
+
+            )
+
+        return stats
+
+    # ======================================================
+    # Runtime Statistics
+    # ======================================================
+
+    def runtime_statistics(self) -> dict:
+        """
+        Runtime statistics.
+        """
+
+        model = self.model
+
+        return {
+
+            "model_loaded": self._model is not None,
+
+            "dimension": model.get_sentence_embedding_dimension(),
+
+            "max_sequence_length": getattr(
+
+                model,
+
+                "max_seq_length",
+
+                512,
+
+            ),
+
+            "device": self.device,
+
+            "gpu": self.using_gpu,
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        samples: int = 100,
+    ) -> dict:
+        """
+        Benchmark embedding speed.
+        """
+
+        import time
+
+        texts = [
+
+            f"Embedding benchmark {i}"
+
+            for i in range(samples)
+
+        ]
+
+        start = time.perf_counter()
+
+        self.model.encode(
+
+            texts,
+
+            batch_size=32,
+
+            show_progress_bar=False,
+
+        )
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "samples": samples,
+
+            "seconds": round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+            "embeddings_per_second": round(
+
+                samples / max(elapsed, 1e-6),
+
+                2,
+
+            ),
+
+        }
+
+    # ======================================================
+    # Warmup
+    # ======================================================
+
+    def warmup(self):
+        """
+        Warm up the embedding model.
+        """
+
+        logger.info("Running model warmup...")
+
+        self.model.encode(
+
+            [
+
+                "Warmup sentence."
+
+            ],
+
+            show_progress_bar=False,
+
+        )
+
+        logger.info("Warmup complete.")
+
+    # ======================================================
+    # Device Information
+    # ======================================================
+
+    def device_information(self) -> dict:
+        """
+        Return device information.
+        """
+
+        info = {
+
+            "device": self.device,
+
+            "cuda_available": torch.cuda.is_available(),
+
+        }
+
+        if torch.cuda.is_available():
+
+            info["gpu_name"] = torch.cuda.get_device_name(0)
+
+            info["device_count"] = torch.cuda.device_count()
+
+        return info
+
+    # ======================================================
+    # Context Length
+    # ======================================================
+
+    def context_length(self) -> int:
+        """
+        Maximum supported sequence length.
+        """
+
+        return getattr(
+
+            self.model,
+
+            "max_seq_length",
+
+            512,
+
+        )
+
+    # ======================================================
+    # Embedding Dimension
+    # ======================================================
+
+    def embedding_dimension(self) -> int:
+        """
+        Embedding vector size.
+        """
+
+        return self.model.get_sentence_embedding_dimension()
+
+    # ======================================================
+    # GPU Available
+    # ======================================================
+
+    @staticmethod
+    def gpu_available() -> bool:
+
+        return torch.cuda.is_available()
+
+    # ======================================================
+    # CPU Available
+    # ======================================================
+
+    @staticmethod
+    def cpu_available() -> bool:
+
+        return True
