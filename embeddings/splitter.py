@@ -621,3 +621,359 @@ class TextSplitter:
                 seen.add(chunk)
 
         return unique
+
+    # ======================================================
+    # Markdown Splitter
+    # ======================================================
+
+    def split_markdown(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split Markdown by headings.
+        """
+
+        self.validate_text(text)
+
+        sections = re.split(
+            r"(?=^#{1,6}\s)",
+            text,
+            flags=re.MULTILINE,
+        )
+
+        return [
+            s.strip()
+            for s in sections
+            if s.strip()
+        ]
+
+    # ======================================================
+    # HTML Splitter
+    # ======================================================
+
+    def split_html(
+        self,
+        html: str,
+    ) -> List[str]:
+        """
+        Split HTML into logical text blocks.
+        """
+
+        self.validate_text(html)
+
+        try:
+            from bs4 import BeautifulSoup
+
+            soup = BeautifulSoup(html, "html.parser")
+
+            blocks = []
+
+            for tag in soup.find_all(
+                [
+                    "h1",
+                    "h2",
+                    "h3",
+                    "h4",
+                    "p",
+                    "li",
+                    "pre",
+                    "code",
+                    "blockquote",
+                ]
+            ):
+
+                text = tag.get_text(
+                    " ",
+                    strip=True,
+                )
+
+                if text:
+
+                    blocks.append(text)
+
+            return blocks
+
+        except ImportError:
+
+            logger.warning(
+                "BeautifulSoup not installed."
+            )
+
+            clean = re.sub(
+                r"<[^>]+>",
+                " ",
+                html,
+            )
+
+            return self.split_paragraphs(clean)
+
+    # ======================================================
+    # JSON Splitter
+    # ======================================================
+
+    def split_json(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split JSON into top-level objects.
+        """
+
+        import json
+
+        self.validate_text(text)
+
+        obj = json.loads(text)
+
+        if isinstance(obj, dict):
+
+            return [
+
+                f"{k}: {v}"
+
+                for k, v in obj.items()
+
+            ]
+
+        if isinstance(obj, list):
+
+            return [
+
+                json.dumps(
+                    item,
+                    indent=2,
+                )
+
+                for item in obj
+
+            ]
+
+        return [str(obj)]
+
+    # ======================================================
+    # XML Splitter
+    # ======================================================
+
+    def split_xml(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split XML into child elements.
+        """
+
+        import xml.etree.ElementTree as ET
+
+        self.validate_text(text)
+
+        root = ET.fromstring(text)
+
+        chunks = []
+
+        for child in root:
+
+            chunks.append(
+
+                ET.tostring(
+
+                    child,
+
+                    encoding="unicode",
+
+                )
+
+            )
+
+        return chunks
+
+    # ======================================================
+    # CSV Splitter
+    # ======================================================
+
+    def split_csv(
+        self,
+        text: str,
+        rows_per_chunk: int = 100,
+    ) -> List[str]:
+        """
+        Split CSV by row groups.
+        """
+
+        self.validate_text(text)
+
+        lines = text.splitlines()
+
+        if not lines:
+
+            return []
+
+        header = lines[0]
+
+        rows = lines[1:]
+
+        chunks = []
+
+        for i in range(
+            0,
+            len(rows),
+            rows_per_chunk,
+        ):
+
+            part = rows[
+                i:i + rows_per_chunk
+            ]
+
+            chunks.append(
+
+                "\n".join(
+                    [header] + part
+                )
+
+            )
+
+        return chunks
+
+    # ======================================================
+    # YAML Splitter
+    # ======================================================
+
+    def split_yaml(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split YAML documents.
+        """
+
+        self.validate_text(text)
+
+        docs = re.split(
+            r"^---\s*$",
+            text,
+            flags=re.MULTILINE,
+        )
+
+        return [
+
+            d.strip()
+
+            for d in docs
+
+            if d.strip()
+
+        ]
+
+    # ======================================================
+    # SQL Splitter
+    # ======================================================
+
+    def split_sql(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split SQL script into statements.
+        """
+
+        self.validate_text(text)
+
+        statements = re.split(
+            r";\s*\n",
+            text,
+        )
+
+        return [
+
+            s.strip()
+
+            for s in statements
+
+            if s.strip()
+
+        ]
+
+    # ======================================================
+    # Log Splitter
+    # ======================================================
+
+    def split_logs(
+        self,
+        text: str,
+    ) -> List[str]:
+        """
+        Split log file into entries.
+        """
+
+        self.validate_text(text)
+
+        entries = re.split(
+            r"\n(?=\d{4}-\d{2}-\d{2})",
+            text,
+        )
+
+        return [
+
+            e.strip()
+
+            for e in entries
+
+            if e.strip()
+
+        ]
+
+    # ======================================================
+    # Python Code Splitter
+    # ======================================================
+
+    def split_python(
+        self,
+        code: str,
+    ) -> List[str]:
+        """
+        Split Python source by class/function definitions.
+        """
+
+        self.validate_text(code)
+
+        pattern = (
+            r"(?=^class\s)"
+            r"|(?=^def\s)"
+            r"|(?=^async\s+def\s)"
+        )
+
+        blocks = re.split(
+            pattern,
+            code,
+            flags=re.MULTILINE,
+        )
+
+        return [
+
+            b.strip()
+
+            for b in blocks
+
+            if b.strip()
+
+        ]
+
+    # ======================================================
+    # Generic Code Splitter
+    # ======================================================
+
+    def split_code(
+        self,
+        code: str,
+    ) -> List[str]:
+        """
+        Generic source-code splitter.
+        """
+
+        self.validate_text(code)
+
+        return self.split_characters(
+            code,
+            size=1500,
+            overlap=150,
+        )
