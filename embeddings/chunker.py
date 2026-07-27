@@ -832,3 +832,371 @@ class SemanticChunker:
         )
 
         return chunks
+
+    # ======================================================
+    # Token-aware Chunking
+    # ======================================================
+
+    def token_chunks(
+        self,
+        text: str,
+        max_tokens: Optional[int] = None,
+    ) -> List[Chunk]:
+        """
+        Split text based on estimated token count.
+        """
+
+        text = self.validate_text(text)
+
+        max_tokens = max_tokens or self.chunk_size
+
+        words = text.split()
+
+        chunks = []
+
+        current = []
+
+        index = 0
+
+        cursor = 0
+
+        for word in words:
+
+            current.append(word)
+
+            if len(current) >= max_tokens:
+
+                chunk_text = " ".join(current)
+
+                metadata = self.create_metadata(
+
+                    chunk_text,
+
+                    index,
+
+                    cursor,
+
+                    cursor + len(chunk_text),
+
+                )
+
+                chunks.append(
+
+                    Chunk(
+
+                        chunk_id=metadata["chunk_id"],
+
+                        text=chunk_text,
+
+                        index=index,
+
+                        start_char=cursor,
+
+                        end_char=cursor + len(chunk_text),
+
+                        token_count=metadata["tokens"],
+
+                        word_count=metadata["words"],
+
+                        metadata=metadata,
+
+                    )
+
+                )
+
+                cursor += len(chunk_text) + 1
+
+                current = []
+
+                index += 1
+
+        if current:
+
+            chunk_text = " ".join(current)
+
+            metadata = self.create_metadata(
+
+                chunk_text,
+
+                index,
+
+                cursor,
+
+                cursor + len(chunk_text),
+
+            )
+
+            chunks.append(
+
+                Chunk(
+
+                    chunk_id=metadata["chunk_id"],
+
+                    text=chunk_text,
+
+                    index=index,
+
+                    start_char=cursor,
+
+                    end_char=cursor + len(chunk_text),
+
+                    token_count=metadata["tokens"],
+
+                    word_count=metadata["words"],
+
+                    metadata=metadata,
+
+                )
+
+            )
+
+        logger.info("Generated %d token chunks.", len(chunks))
+
+        return chunks
+
+    # ======================================================
+    # Code Chunking
+    # ======================================================
+
+    def code_chunks(
+        self,
+        code: str,
+    ) -> List[Chunk]:
+        """
+        Split source code by functions/classes.
+        """
+
+        code = self.validate_text(code)
+
+        pattern = r"(?=^\s*(?:def|class)\s+)"
+
+        blocks = re.split(
+
+            pattern,
+
+            code,
+
+            flags=re.MULTILINE,
+
+        )
+
+        blocks = [
+
+            b.strip()
+
+            for b in blocks
+
+            if b.strip()
+
+        ]
+
+        if not blocks:
+
+            return self.fixed_chunks(code)
+
+        chunks = []
+
+        cursor = 0
+
+        for index, block in enumerate(blocks):
+
+            metadata = self.create_metadata(
+
+                block,
+
+                index,
+
+                cursor,
+
+                cursor + len(block),
+
+            )
+
+            chunks.append(
+
+                Chunk(
+
+                    chunk_id=metadata["chunk_id"],
+
+                    text=block,
+
+                    index=index,
+
+                    start_char=cursor,
+
+                    end_char=cursor + len(block),
+
+                    token_count=metadata["tokens"],
+
+                    word_count=metadata["words"],
+
+                    metadata=metadata,
+
+                )
+
+            )
+
+            cursor += len(block)
+
+        logger.info("Generated %d code chunks.", len(chunks))
+
+        return chunks
+
+    # ======================================================
+    # Filter Empty Chunks
+    # ======================================================
+
+    def remove_empty(
+        self,
+        chunks: List[Chunk],
+    ) -> List[Chunk]:
+
+        return [
+
+            chunk
+
+            for chunk in chunks
+
+            if chunk.text.strip()
+
+        ]
+
+    # ======================================================
+    # Remove Duplicate Chunks
+    # ======================================================
+
+    def remove_duplicates(
+        self,
+        chunks: List[Chunk],
+    ) -> List[Chunk]:
+
+        unique = {}
+
+        for chunk in chunks:
+
+            unique.setdefault(
+
+                chunk.text,
+
+                chunk,
+
+            )
+
+        return list(unique.values())
+
+    # ======================================================
+    # Sort Chunks
+    # ======================================================
+
+    @staticmethod
+    def sort_chunks(
+        chunks: List[Chunk],
+    ) -> List[Chunk]:
+
+        return sorted(
+
+            chunks,
+
+            key=lambda chunk: chunk.index,
+
+        )
+
+    # ======================================================
+    # Chunk Length Filter
+    # ======================================================
+
+    def filter_by_length(
+        self,
+        chunks: List[Chunk],
+        minimum: int = 30,
+    ) -> List[Chunk]:
+
+        return [
+
+            chunk
+
+            for chunk in chunks
+
+            if len(chunk.text) >= minimum
+
+        ]
+
+    # ======================================================
+    # Export Metadata
+    # ======================================================
+
+    @staticmethod
+    def export_metadata(
+        chunks: List[Chunk],
+    ) -> List[dict]:
+
+        return [
+
+            chunk.metadata
+
+            for chunk in chunks
+
+        ]
+
+    # ======================================================
+    # Text Only
+    # ======================================================
+
+    @staticmethod
+    def texts(
+        chunks: List[Chunk],
+    ) -> List[str]:
+
+        return [
+
+            chunk.text
+
+            for chunk in chunks
+
+        ]
+
+    # ======================================================
+    # Chunk Dictionary
+    # ======================================================
+
+    @staticmethod
+    def as_dict(
+        chunk: Chunk,
+    ) -> dict:
+
+        return {
+
+            "id": chunk.chunk_id,
+
+            "text": chunk.text,
+
+            "index": chunk.index,
+
+            "start": chunk.start_char,
+
+            "end": chunk.end_char,
+
+            "tokens": chunk.token_count,
+
+            "words": chunk.word_count,
+
+            "metadata": chunk.metadata,
+
+        }
+
+    # ======================================================
+    # All Chunks as Dictionaries
+    # ======================================================
+
+    def dictionaries(
+        self,
+        chunks: List[Chunk],
+    ) -> List[dict]:
+
+        return [
+
+            self.as_dict(chunk)
+
+            for chunk in chunks
+
+        ]
