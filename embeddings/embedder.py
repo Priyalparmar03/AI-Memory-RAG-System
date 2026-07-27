@@ -840,3 +840,244 @@ class EmbeddingService:
             yield texts[
                 i : i + self.batch_size
             ]
+
+    ####################################################################
+    # Model Management
+    ####################################################################
+
+    def change_model(
+        self,
+        model_name: str,
+    ) -> None:
+        """
+        Change the embedding model.
+        """
+
+        if not model_name:
+            raise EmbeddingError("Model name cannot be empty.")
+
+        logger.info(
+            "Changing embedding model from %s to %s",
+            self.model_name,
+            model_name,
+        )
+
+        with self._lock:
+
+            self._model = None
+            self.model_name = model_name
+
+        # Force load
+        _ = self.model
+
+    ####################################################################
+    # Warmup
+    ####################################################################
+
+    def warmup(self) -> None:
+        """
+        Perform a warm-up inference to reduce first-request latency.
+        """
+
+        logger.info("Warming up embedding model...")
+
+        self.embed_text("Embedding service warmup.")
+
+        logger.info("Warmup complete.")
+
+    ####################################################################
+    # Memory Usage
+    ####################################################################
+
+    def memory_usage(self) -> dict:
+        """
+        Return memory usage statistics.
+        """
+
+        stats = {
+            "device": self.device,
+            "gpu": self.using_gpu,
+        }
+
+        if torch.cuda.is_available():
+
+            stats.update(
+
+                {
+
+                    "allocated_mb": round(
+
+                        torch.cuda.memory_allocated()
+
+                        / (1024 ** 2),
+
+                        2,
+
+                    ),
+
+                    "reserved_mb": round(
+
+                        torch.cuda.memory_reserved()
+
+                        / (1024 ** 2),
+
+                        2,
+
+                    ),
+
+                }
+
+            )
+
+        return stats
+
+    ####################################################################
+    # Diagnostics
+    ####################################################################
+
+    def diagnostics(self) -> dict:
+        """
+        Complete diagnostics.
+        """
+
+        return {
+
+            "health": self.health(),
+
+            "statistics": self.statistics(),
+
+            "memory": self.memory_usage(),
+
+            "model_loaded": self._model is not None,
+
+        }
+
+    ####################################################################
+    # Cache Hook
+    ####################################################################
+
+    def clear_cache(self) -> None:
+        """
+        Placeholder for embedding cache cleanup.
+        """
+
+        logger.info("Embedding cache cleared.")
+
+    ####################################################################
+    # Reload
+    ####################################################################
+
+    def reload(self) -> None:
+        """
+        Reload current model.
+        """
+
+        logger.info("Reloading embedding model...")
+
+        with self._lock:
+
+            self._model = None
+
+        _ = self.model
+
+    ####################################################################
+    # Benchmark
+    ####################################################################
+
+    def benchmark(
+        self,
+        samples: int = 100,
+    ) -> dict:
+        """
+        Simple embedding benchmark.
+        """
+
+        import time
+
+        texts = [
+
+            f"Benchmark sentence {i}"
+
+            for i in range(samples)
+
+        ]
+
+        start = time.perf_counter()
+
+        self.embed_documents(texts)
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "samples": samples,
+
+            "seconds": round(elapsed, 4),
+
+            "throughput": round(
+
+                samples / elapsed,
+
+                2,
+
+            ),
+
+        }
+
+    ####################################################################
+    # Shutdown
+    ####################################################################
+
+    def close(self) -> None:
+        """
+        Release model resources.
+        """
+
+        logger.info("Closing embedding service...")
+
+        self._model = None
+
+        if torch.cuda.is_available():
+
+            torch.cuda.empty_cache()
+
+        logger.info("Embedding service closed.")
+
+    ####################################################################
+    # Context Manager
+    ####################################################################
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+
+        self.close()
+
+    ####################################################################
+    # Representation
+    ####################################################################
+
+    def __repr__(self) -> str:
+
+        return (
+
+            f"EmbeddingService("
+
+            f"model='{self.model_name}', "
+
+            f"device='{self.device}', "
+
+            f"dimension={self.embedding_dimension}, "
+
+            f"batch_size={self.batch_size}"
+
+            f")"
+
+        )
