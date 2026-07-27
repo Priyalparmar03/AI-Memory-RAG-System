@@ -232,3 +232,308 @@ class EmbeddingService:
                 "error": str(exc),
 
             }
+
+    ####################################################################
+    # Single Text Embedding
+    ####################################################################
+
+    def embed_text(
+        self,
+        text: str,
+    ) -> np.ndarray:
+        """
+        Generate embedding for a single text.
+
+        Parameters
+        ----------
+        text : str
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
+        text = self._validate_text(text)
+
+        embedding = self._encode([text])
+
+        return embedding[0]
+
+    ####################################################################
+    # Query Embedding
+    ####################################################################
+
+    def embed_query(
+        self,
+        query: str,
+    ) -> np.ndarray:
+        """
+        Generate embedding for search queries.
+        """
+
+        return self.embed_text(query)
+
+    ####################################################################
+    # Document Embedding
+    ####################################################################
+
+    def embed_document(
+        self,
+        document: str,
+    ) -> np.ndarray:
+        """
+        Generate embedding for an entire document.
+        """
+
+        return self.embed_text(document)
+
+    ####################################################################
+    # Multiple Documents
+    ####################################################################
+
+    def embed_documents(
+        self,
+        documents: Sequence[str],
+    ) -> np.ndarray:
+        """
+        Embed a list of documents.
+        """
+
+        documents = self._validate_batch(documents)
+
+        return self._encode(documents)
+
+    ####################################################################
+    # Batch Embedding
+    ####################################################################
+
+    def embed_batch(
+        self,
+        texts: Sequence[str],
+    ) -> np.ndarray:
+        """
+        Alias for embed_documents().
+        """
+
+        return self.embed_documents(texts)
+
+    ####################################################################
+    # Iterator Support
+    ####################################################################
+
+    def embed_iterable(
+        self,
+        texts: Iterable[str],
+    ) -> np.ndarray:
+        """
+        Embed any iterable of strings.
+        """
+
+        texts = list(texts)
+
+        return self.embed_documents(texts)
+
+    ####################################################################
+    # Large Dataset Embedding
+    ####################################################################
+
+    def embed_large_collection(
+        self,
+        texts: Sequence[str],
+    ) -> np.ndarray:
+        """
+        Embed very large collections efficiently
+        using mini-batches.
+        """
+
+        texts = self._validate_batch(texts)
+
+        vectors = []
+
+        total = len(texts)
+
+        logger.info(
+            "Embedding %d documents...",
+            total,
+        )
+
+        for start in range(
+
+            0,
+
+            total,
+
+            self.batch_size,
+
+        ):
+
+            end = start + self.batch_size
+
+            batch = texts[start:end]
+
+            batch_vectors = self._encode(batch)
+
+            vectors.append(batch_vectors)
+
+        return np.vstack(vectors)
+
+    ####################################################################
+    # Embedding Dictionary
+    ####################################################################
+
+    def embed_dictionary(
+        self,
+        data: dict,
+    ) -> dict:
+        """
+        Embed every string value in a dictionary.
+
+        Returns
+        -------
+        {
+            key : embedding
+        }
+        """
+
+        results = {}
+
+        for key, value in data.items():
+
+            if isinstance(value, str):
+
+                results[key] = self.embed_text(value)
+
+        return results
+
+    ####################################################################
+    # Pair Embeddings
+    ####################################################################
+
+    def embed_pair(
+        self,
+        first: str,
+        second: str,
+    ):
+        """
+        Embed two texts simultaneously.
+        """
+
+        vectors = self.embed_documents(
+
+            [
+
+                first,
+
+                second,
+
+            ]
+
+        )
+
+        return vectors[0], vectors[1]
+
+    ####################################################################
+    # Matrix Embedding
+    ####################################################################
+
+    def embedding_matrix(
+        self,
+        texts: Sequence[str],
+    ) -> np.ndarray:
+        """
+        Returns embedding matrix.
+
+        Shape
+
+        (N, Dimension)
+        """
+
+        return self.embed_documents(texts)
+
+    ####################################################################
+    # Normalize Existing Embeddings
+    ####################################################################
+
+    @staticmethod
+    def normalize_vectors(
+        vectors: np.ndarray,
+    ) -> np.ndarray:
+        """
+        L2 Normalize vectors.
+        """
+
+        norms = np.linalg.norm(
+
+            vectors,
+
+            axis=1,
+
+            keepdims=True,
+
+        )
+
+        norms[norms == 0] = 1
+
+        return vectors / norms
+
+    ####################################################################
+    # Mean Embedding
+    ####################################################################
+
+    def mean_embedding(
+        self,
+        texts: Sequence[str],
+    ) -> np.ndarray:
+        """
+        Compute average embedding
+        across multiple texts.
+        """
+
+        vectors = self.embed_documents(texts)
+
+        return np.mean(
+
+            vectors,
+
+            axis=0,
+
+        )
+
+    ####################################################################
+    # Embedding Metadata
+    ####################################################################
+
+    def embedding_info(
+        self,
+        vector: np.ndarray,
+    ) -> dict:
+        """
+        Return metadata
+        about a vector.
+        """
+
+        return {
+
+            "dimension": len(vector),
+
+            "dtype": str(vector.dtype),
+
+            "shape": vector.shape,
+
+            "normalized": self.normalize,
+
+        }
+
+    ####################################################################
+    # Empty Vector
+    ####################################################################
+
+    def empty_vector(self):
+
+        return np.zeros(
+
+            self.embedding_dimension,
+
+            dtype=np.float32,
+
+        )
