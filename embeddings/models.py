@@ -277,3 +277,314 @@ class EmbeddingModelManager:
     def cache_directory(self):
 
         return self.cache_folder
+
+    # ======================================================
+    # Available Models
+    # ======================================================
+
+    def available_models(self) -> List[str]:
+        """
+        Return all supported models.
+        """
+
+        return sorted(
+            self.MODEL_REGISTRY.keys()
+        )
+
+    # ======================================================
+    # Model Exists
+    # ======================================================
+
+    def model_exists(
+        self,
+        model: str,
+    ) -> bool:
+
+        return model in self.MODEL_REGISTRY
+
+    # ======================================================
+    # Model Information
+    # ======================================================
+
+    def model_info(
+        self,
+        model: Optional[str] = None,
+    ) -> EmbeddingModelInfo:
+        """
+        Return metadata about a model.
+        """
+
+        model = model or self.model_name
+
+        if model in self.MODEL_REGISTRY:
+
+            info = self.MODEL_REGISTRY[model]
+
+            return EmbeddingModelInfo(
+
+                name=model,
+
+                dimension=info["dimension"],
+
+                description=info["description"],
+
+                multilingual=info["multilingual"],
+
+                max_sequence_length=512,
+
+                normalized=True,
+
+            )
+
+        if self._model:
+
+            return EmbeddingModelInfo(
+
+                name=model,
+
+                dimension=self.dimension,
+
+                description="Custom model",
+
+                multilingual=False,
+
+                max_sequence_length=getattr(
+                    self._model,
+                    "max_seq_length",
+                    512,
+                ),
+
+                normalized=True,
+
+            )
+
+        raise EmbeddingModelError(
+            f"Unknown model: {model}"
+        )
+
+    # ======================================================
+    # Load Model
+    # ======================================================
+
+    def load_model(
+        self,
+        model_name: Optional[str] = None,
+    ) -> SentenceTransformer:
+        """
+        Load an embedding model.
+        """
+
+        if model_name:
+
+            if self.model_exists(model_name):
+
+                model_name = self.MODEL_REGISTRY[
+                    model_name
+                ]["hf"]
+
+            self.model_name = model_name
+
+            self._model = None
+
+        logger.info(
+            "Loading model %s",
+            self.model_name,
+        )
+
+        return self.model
+
+    # ======================================================
+    # Unload Model
+    # ======================================================
+
+    def unload_model(self):
+        """
+        Release model resources.
+        """
+
+        logger.info(
+            "Unloading model..."
+        )
+
+        self._model = None
+
+        if torch.cuda.is_available():
+
+            torch.cuda.empty_cache()
+
+    # ======================================================
+    # Reload
+    # ======================================================
+
+    def reload_model(self):
+        """
+        Reload current model.
+        """
+
+        logger.info(
+            "Reloading model..."
+        )
+
+        self.unload_model()
+
+        return self.load_model(
+            self.model_name
+        )
+
+    # ======================================================
+    # Change Model
+    # ======================================================
+
+    def change_model(
+        self,
+        model: str,
+    ):
+        """
+        Switch to another model.
+        """
+
+        logger.info(
+
+            "Changing model %s -> %s",
+
+            self.model_name,
+
+            model,
+
+        )
+
+        return self.load_model(model)
+
+    # ======================================================
+    # Download
+    # ======================================================
+
+    def download_model(
+        self,
+        model: str,
+    ):
+        """
+        Download model into cache.
+        """
+
+        logger.info(
+            "Downloading %s",
+            model,
+        )
+
+        if self.model_exists(model):
+
+            model = self.MODEL_REGISTRY[
+                model
+            ]["hf"]
+
+        SentenceTransformer(
+
+            model,
+
+            device=self.device,
+
+            cache_folder=str(
+                self.cache_folder
+            )
+            if self.cache_folder
+            else None,
+
+        )
+
+        logger.info(
+            "Download complete."
+        )
+
+    # ======================================================
+    # Installed Models
+    # ======================================================
+
+    def installed_models(
+        self,
+    ) -> List[str]:
+        """
+        Return downloaded models.
+        """
+
+        if self.cache_folder is None:
+
+            return []
+
+        if not self.cache_folder.exists():
+
+            return []
+
+        return sorted(
+
+            [
+
+                p.name
+
+                for p in self.cache_folder.iterdir()
+
+                if p.is_dir()
+
+            ]
+
+        )
+
+    # ======================================================
+    # Validate Model
+    # ======================================================
+
+    def validate_model(
+        self,
+        model: str,
+    ) -> bool:
+        """
+        Verify model can be loaded.
+        """
+
+        try:
+
+            SentenceTransformer(
+
+                model,
+
+                device=self.device,
+
+            )
+
+            return True
+
+        except Exception:
+
+            return False
+
+    # ======================================================
+    # Current Configuration
+    # ======================================================
+
+    def configuration(self):
+
+        return {
+
+            "model": self.model_name,
+
+            "device": self.device,
+
+            "cache": str(
+                self.cache_folder
+            )
+            if self.cache_folder
+            else None,
+
+            "gpu": self.using_gpu,
+
+            "dimension": self.dimension,
+
+        }
+
+    # ======================================================
+    # Supported Models
+    # ======================================================
+
+    def registry(self):
+
+        return self.MODEL_REGISTRY.copy()
