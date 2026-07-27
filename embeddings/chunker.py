@@ -1200,3 +1200,332 @@ class SemanticChunker:
             for chunk in chunks
 
         ]
+
+    # ======================================================
+    # Chunk Validation
+    # ======================================================
+
+    def validate_chunks(
+        self,
+        chunks: List[Chunk],
+    ) -> bool:
+        """
+        Validate generated chunks.
+        """
+
+        if not chunks:
+            return False
+
+        for chunk in chunks:
+
+            if not chunk.text.strip():
+                return False
+
+            if chunk.start_char > chunk.end_char:
+                return False
+
+            if chunk.word_count <= 0:
+                return False
+
+            if chunk.token_count <= 0:
+                return False
+
+        return True
+
+    # ======================================================
+    # Chunk File
+    # ======================================================
+
+    def chunk_file(
+        self,
+        path: str,
+        strategy: str = "recursive",
+        encoding: str = "utf-8",
+    ) -> List[Chunk]:
+        """
+        Read a text file and chunk it.
+        """
+
+        with open(
+            path,
+            "r",
+            encoding=encoding,
+        ) as f:
+
+            text = f.read()
+
+        return self.chunk_text(
+            text=text,
+            strategy=strategy,
+        )
+
+    # ======================================================
+    # Generic Chunk API
+    # ======================================================
+
+    def chunk_text(
+        self,
+        text: str,
+        strategy: str = "recursive",
+    ) -> List[Chunk]:
+        """
+        Generic chunking interface.
+        """
+
+        strategy = strategy.lower()
+
+        strategies = {
+
+            "fixed": self.fixed_chunks,
+
+            "sentence": self.sentence_chunks,
+
+            "paragraph": self.paragraph_chunks,
+
+            "recursive": self.recursive_chunks,
+
+            "token": self.token_chunks,
+
+            "heading": self.heading_chunks,
+
+            "code": self.code_chunks,
+
+        }
+
+        if strategy not in strategies:
+
+            raise ChunkingError(
+
+                f"Unknown strategy '{strategy}'."
+
+            )
+
+        return strategies[strategy](text)
+
+    # ======================================================
+    # Batch Chunking
+    # ======================================================
+
+    def batch_chunk(
+        self,
+        texts: List[str],
+        strategy: str = "recursive",
+    ) -> List[List[Chunk]]:
+        """
+        Chunk multiple documents.
+        """
+
+        results = []
+
+        for text in texts:
+
+            results.append(
+
+                self.chunk_text(
+
+                    text,
+
+                    strategy,
+
+                )
+
+            )
+
+        return results
+
+    # ======================================================
+    # Health
+    # ======================================================
+
+    def health(self) -> dict:
+        """
+        Health information.
+        """
+
+        return {
+
+            "status": "healthy",
+
+            "chunk_size": self.chunk_size,
+
+            "overlap": self.overlap,
+
+        }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(self) -> dict:
+        """
+        Diagnostics information.
+        """
+
+        return {
+
+            "health": self.health(),
+
+            "configuration": {
+
+                "chunk_size": self.chunk_size,
+
+                "overlap": self.overlap,
+
+            },
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        text: str,
+        strategy: str = "recursive",
+    ) -> dict:
+        """
+        Measure chunking performance.
+        """
+
+        import time
+
+        start = time.perf_counter()
+
+        chunks = self.chunk_text(
+
+            text=text,
+
+            strategy=strategy,
+
+        )
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "strategy": strategy,
+
+            "chunks": len(chunks),
+
+            "seconds": round(
+
+                elapsed,
+
+                5,
+
+            ),
+
+            "characters": len(text),
+
+            "characters_per_second": round(
+
+                len(text) / max(elapsed, 1e-9),
+
+                2,
+
+            ),
+
+        }
+
+    # ======================================================
+    # Configuration
+    # ======================================================
+
+    def configure(
+        self,
+        chunk_size: Optional[int] = None,
+        overlap: Optional[int] = None,
+    ) -> None:
+        """
+        Update chunker configuration.
+        """
+
+        if chunk_size is not None:
+
+            self.chunk_size = chunk_size
+
+        if overlap is not None:
+
+            if overlap >= self.chunk_size:
+
+                raise ChunkingError(
+
+                    "Overlap must be smaller than chunk size."
+
+                )
+
+            self.overlap = overlap
+
+        logger.info(
+
+            "Chunker reconfigured "
+
+            "(chunk_size=%d overlap=%d)",
+
+            self.chunk_size,
+
+            self.overlap,
+
+        )
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    def reset(self) -> None:
+        """
+        Reset to default configuration.
+        """
+
+        self.chunk_size = 500
+
+        self.overlap = 50
+
+        logger.info("Chunker reset to defaults.")
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(self) -> None:
+        """
+        Cleanup resources.
+        """
+
+        logger.info("Chunker closed.")
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # String Representation
+    # ======================================================
+
+    def __repr__(self) -> str:
+
+        return (
+
+            "SemanticChunker("
+
+            f"chunk_size={self.chunk_size}, "
+
+            f"overlap={self.overlap}"
+
+            ")"
+
+        )
