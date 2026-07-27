@@ -1,27 +1,3 @@
-"""
-embeddings/splitter.py
-======================
-
-Production Text Splitter
-
-Features
---------
-- Character splitting
-- Word splitting
-- Sentence splitting
-- Paragraph splitting
-- Recursive splitting
-- Token-aware splitting
-- Batch processing
-- File support
-- Metadata generation
-- Validation
-- Benchmarking
-- Diagnostics
-
-Author: Priyal Parmar
-"""
-
 from __future__ import annotations
 
 import logging
