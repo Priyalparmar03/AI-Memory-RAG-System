@@ -977,3 +977,312 @@ class TextSplitter:
             size=1500,
             overlap=150,
         )
+
+    # ======================================================
+    # Split File
+    # ======================================================
+
+    def split_file(
+        self,
+        file_path: str | Path,
+    ) -> List[str]:
+        """
+        Split a text file based on its extension.
+        """
+
+        path = Path(file_path)
+
+        if not path.exists():
+
+            raise SplitterError(
+                f"File not found: {path}"
+            )
+
+        text = path.read_text(
+            encoding="utf-8",
+            errors="ignore",
+        )
+
+        suffix = path.suffix.lower()
+
+        if suffix == ".md":
+            return self.split_markdown(text)
+
+        elif suffix == ".html":
+            return self.split_html(text)
+
+        elif suffix == ".json":
+            return self.split_json(text)
+
+        elif suffix == ".xml":
+            return self.split_xml(text)
+
+        elif suffix == ".csv":
+            return self.split_csv(text)
+
+        elif suffix == ".yaml" or suffix == ".yml":
+            return self.split_yaml(text)
+
+        elif suffix == ".sql":
+            return self.split_sql(text)
+
+        elif suffix == ".py":
+            return self.split_python(text)
+
+        return self.recursive_split(text)
+
+    # ======================================================
+    # Batch Split
+    # ======================================================
+
+    def batch_split(
+        self,
+        texts: List[str],
+    ) -> List[List[str]]:
+        """
+        Split multiple documents.
+        """
+
+        results = []
+
+        for text in texts:
+
+            try:
+
+                results.append(
+
+                    self.recursive_split(text)
+
+                )
+
+            except Exception as exc:
+
+                logger.exception(exc)
+
+                results.append([])
+
+        return results
+
+    # ======================================================
+    # Chunk Statistics
+    # ======================================================
+
+    def chunk_statistics(
+        self,
+        chunks: List[str],
+    ) -> Dict:
+        """
+        Generate statistics for split chunks.
+        """
+
+        if not chunks:
+
+            return {}
+
+        lengths = [
+
+            len(c)
+
+            for c in chunks
+
+        ]
+
+        return {
+
+            "chunks": len(chunks),
+
+            "min_length": min(lengths),
+
+            "max_length": max(lengths),
+
+            "average_length": round(
+
+                sum(lengths) / len(lengths),
+
+                2,
+
+            ),
+
+            "total_characters": sum(lengths),
+
+        }
+
+    # ======================================================
+    # Health Check
+    # ======================================================
+
+    def health(self) -> Dict:
+        """
+        Splitter health status.
+        """
+
+        return {
+
+            "status": "healthy",
+
+            "chunk_size": self.config.chunk_size,
+
+            "overlap": self.config.overlap,
+
+            "separator": self.config.separator,
+
+        }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(self) -> Dict:
+        """
+        Complete diagnostics report.
+        """
+
+        return {
+
+            "health": self.health(),
+
+            "configuration": {
+
+                "chunk_size": self.config.chunk_size,
+
+                "overlap": self.config.overlap,
+
+                "separator": self.config.separator,
+
+                "strip_whitespace": self.config.strip_whitespace,
+
+                "remove_empty": self.config.remove_empty,
+
+            },
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        text: str,
+        iterations: int = 100,
+    ) -> Dict:
+        """
+        Benchmark recursive splitting.
+        """
+
+        self.validate_text(text)
+
+        start = time.perf_counter()
+
+        for _ in range(iterations):
+
+            self.recursive_split(text)
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "iterations": iterations,
+
+            "seconds": round(elapsed, 4),
+
+            "average_ms": round(
+
+                elapsed * 1000 / iterations,
+
+                3,
+
+            ),
+
+        }
+
+    # ======================================================
+    # Update Configuration
+    # ======================================================
+
+    def configure(
+        self,
+        **kwargs,
+    ):
+        """
+        Update splitter configuration.
+        """
+
+        for key, value in kwargs.items():
+
+            if hasattr(self.config, key):
+
+                setattr(
+
+                    self.config,
+
+                    key,
+
+                    value,
+
+                )
+
+        logger.info(
+            "Splitter configuration updated."
+        )
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    def reset(self):
+        """
+        Reset configuration.
+        """
+
+        self.config = SplitConfig()
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(self):
+        """
+        Cleanup resources.
+        """
+
+        logger.info(
+            "Closing TextSplitter."
+        )
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # Representation
+    # ======================================================
+
+    def __repr__(self):
+
+        return (
+
+            "TextSplitter("
+
+            f"chunk_size={self.config.chunk_size}, "
+
+            f"overlap={self.config.overlap}, "
+
+            f"separator='{self.config.separator}'"
+
+            ")"
+
+        )
