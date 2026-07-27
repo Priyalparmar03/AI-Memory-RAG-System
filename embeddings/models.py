@@ -1,24 +1,3 @@
-"""
-embeddings/models.py
-====================
-
-Production Embedding Model Manager
-
-Features
---------
-- SentenceTransformer models
-- Lazy loading
-- Thread-safe
-- GPU/CPU auto detection
-- Multiple embedding models
-- Model switching
-- Model metadata
-- Health monitoring
-- Benchmarking
-
-Author: Priyal Parmar
-"""
-
 from __future__ import annotations
 
 import logging
