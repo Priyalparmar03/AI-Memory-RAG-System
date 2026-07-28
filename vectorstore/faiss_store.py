@@ -426,3 +426,407 @@ class FaissStore(BaseVectorStore):
         self.faiss_to_doc.clear()
 
         self.index.reset()
+
+# ======================================================
+# Similarity Search
+# ======================================================
+
+def similarity_search(
+    self,
+    query_embedding: List[float],
+    k: int = 5,
+    score_threshold: Optional[float] = None,
+) -> List[SearchResult]:
+    """
+    Perform similarity search using FAISS.
+    """
+
+    if self.count() == 0:
+        return []
+
+    query = np.asarray(
+        [query_embedding],
+        dtype=np.float32,
+    )
+
+    query = self._normalize(query)
+
+    scores, indices = self.index.search(
+        query,
+        min(k, self.count()),
+    )
+
+    results = []
+
+    for score, idx in zip(scores[0], indices[0]):
+
+        if idx == -1:
+            continue
+
+        doc_id = self.faiss_to_doc.get(int(idx))
+
+        if doc_id is None:
+            continue
+
+        document = self.id_to_doc[doc_id]
+
+        similarity = (
+            float(score)
+            if self.metric in ("cosine", "ip")
+            else 1.0 / (1.0 + float(score))
+        )
+
+        if (
+            score_threshold is not None
+            and similarity < score_threshold
+        ):
+            continue
+
+        results.append(
+
+            SearchResult(
+
+                id=document.id,
+
+                score=similarity,
+
+                document=document.text,
+
+                metadata=document.metadata,
+
+                embedding=document.embedding,
+
+            )
+
+        )
+
+    return results
+
+
+# ======================================================
+# Similarity Search (Text)
+# ======================================================
+
+def similarity_search_text(
+    self,
+    query: str,
+    embedding_function,
+    k: int = 5,
+    score_threshold: Optional[float] = None,
+) -> List[SearchResult]:
+    """
+    Search using raw text.
+
+    embedding_function must return List[float].
+    """
+
+    embedding = embedding_function(query)
+
+    return self.similarity_search(
+
+        embedding,
+
+        k,
+
+        score_threshold,
+
+    )
+
+
+# ======================================================
+# Metadata Search
+# ======================================================
+
+def search_by_metadata(
+    self,
+    filters: Dict[str, Any],
+    limit: int = 100,
+) -> List[VectorDocument]:
+    """
+    Filter documents by metadata.
+    """
+
+    output = []
+
+    for doc in self.id_to_doc.values():
+
+        matched = True
+
+        for key, value in filters.items():
+
+            if doc.metadata.get(key) != value:
+
+                matched = False
+
+                break
+
+        if matched:
+
+            output.append(doc)
+
+        if len(output) >= limit:
+
+            break
+
+    return output
+
+
+# ======================================================
+# Batch Search
+# ======================================================
+
+def batch_search(
+    self,
+    query_embeddings: List[List[float]],
+    k: int = 5,
+) -> List[List[SearchResult]]:
+    """
+    Search multiple vectors.
+    """
+
+    outputs = []
+
+    for embedding in query_embeddings:
+
+        outputs.append(
+
+            self.similarity_search(
+
+                embedding,
+
+                k,
+
+            )
+
+        )
+
+    return outputs
+
+
+# ======================================================
+# Range Search
+# ======================================================
+
+def range_search(
+    self,
+    query_embedding: List[float],
+    radius: float,
+) -> List[SearchResult]:
+    """
+    Return all vectors above threshold.
+    """
+
+    results = self.similarity_search(
+
+        query_embedding,
+
+        self.count(),
+
+    )
+
+    return [
+
+        r
+
+        for r in results
+
+        if r.score >= radius
+
+    ]
+
+
+# ======================================================
+# Hybrid Search
+# ======================================================
+
+def hybrid_search(
+    self,
+    query: str,
+    query_embedding: List[float],
+    k: int = 5,
+    alpha: float = 0.5,
+) -> List[SearchResult]:
+    """
+    Placeholder.
+
+    Full implementation belongs to search.py
+    """
+
+    return self.similarity_search(
+
+        query_embedding,
+
+        k,
+
+    )
+
+
+# ======================================================
+# Maximum Marginal Relevance
+# ======================================================
+
+def mmr_search(
+    self,
+    query_embedding: List[float],
+    k: int = 5,
+    fetch_k: int = 20,
+    lambda_mult: float = 0.5,
+) -> List[SearchResult]:
+    """
+    Placeholder.
+
+    Full MMR implemented in search.py.
+    """
+
+    return self.similarity_search(
+
+        query_embedding,
+
+        fetch_k,
+
+    )[:k]
+
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+
+    return {
+
+        "backend": "FAISS",
+
+        "collection": self.collection_name,
+
+        "documents": self.count(),
+
+        "dimension": self.dimension,
+
+        "metric": self.metric,
+
+        "index_type": self.index_type,
+
+        "gpu": self.use_gpu,
+
+    }
+
+
+# ======================================================
+# Health
+# ======================================================
+
+def health(
+    self,
+) -> Dict[str, Any]:
+
+    try:
+
+        self.index.ntotal
+
+        return {
+
+            "status": "healthy",
+
+            "backend": "FAISS",
+
+            "documents": self.count(),
+
+        }
+
+    except Exception as exc:
+
+        return {
+
+            "status": "failed",
+
+            "error": str(exc),
+
+        }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+
+    return {
+
+        "statistics": self.statistics(),
+
+        "health": self.health(),
+
+        "trained": getattr(
+
+            self.index,
+
+            "is_trained",
+
+            True,
+
+        ),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+    num_queries: int = 100,
+    top_k: int = 5,
+) -> Dict[str, Any]:
+    """
+    Benchmark FAISS retrieval speed.
+    """
+
+    if self.count() == 0:
+
+        return {
+
+            "status": "empty"
+
+        }
+
+    dummy = np.random.random(
+
+        self.dimension
+
+    ).astype(np.float32)
+
+    start = time.perf_counter()
+
+    for _ in range(num_queries):
+
+        self.similarity_search(
+
+            dummy.tolist(),
+
+            top_k,
+
+        )
+
+    elapsed = time.perf_counter() - start
+
+    return {
+
+        "queries": num_queries,
+
+        "seconds": round(elapsed, 4),
+
+        "queries_per_second": round(
+
+            num_queries / elapsed,
+
+            2,
+
+        ),
+
+    }
