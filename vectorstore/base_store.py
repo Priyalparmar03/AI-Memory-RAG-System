@@ -613,3 +613,247 @@ class BaseVectorStore(ABC):
         """
         Embedding vector dimension.
         """
+
+    # ======================================================
+    # Save
+    # ======================================================
+
+    @abstractmethod
+    def save(
+        self,
+        path: str,
+    ) -> None:
+        """
+        Persist the vector store to disk.
+
+        Parameters
+        ----------
+        path : str
+            Destination directory or file.
+        """
+
+    # ======================================================
+    # Load
+    # ======================================================
+
+    @abstractmethod
+    def load(
+        self,
+        path: str,
+    ) -> None:
+        """
+        Load an existing vector store.
+        """
+
+    # ======================================================
+    # Flush
+    # ======================================================
+
+    @abstractmethod
+    def flush(
+        self,
+    ) -> None:
+        """
+        Flush pending writes.
+
+        Required for persistent backends.
+        """
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    @abstractmethod
+    def reset(
+        self,
+    ) -> None:
+        """
+        Reset the vector store to an empty state.
+        """
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    @abstractmethod
+    def close(
+        self,
+    ) -> None:
+        """
+        Release resources.
+
+        Close database connections,
+        free memory,
+        flush buffers.
+        """
+
+    # ======================================================
+    # Sync
+    # ======================================================
+
+    def sync(self) -> None:
+        """
+        Synchronize pending changes.
+
+        Default implementation delegates to flush().
+        """
+
+        self.flush()
+
+    # ======================================================
+    # Ready
+    # ======================================================
+
+    @property
+    def ready(self) -> bool:
+        """
+        Returns True if the store is ready.
+        """
+
+        try:
+
+            return self.validate()
+
+        except Exception:
+
+            return False
+
+    # ======================================================
+    # Collection Name
+    # ======================================================
+
+    @property
+    def name(self) -> str:
+        """
+        Alias for collection name.
+        """
+
+        return self.collection_name
+
+    # ======================================================
+    # Empty
+    # ======================================================
+
+    @property
+    def empty(self) -> bool:
+        """
+        Returns True when no vectors exist.
+        """
+
+        return self.count() == 0
+
+    # ======================================================
+    # Default Context Manager
+    # ======================================================
+
+    def __enter__(self):
+        """
+        Context manager entry.
+        """
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
+        """
+        Context manager exit.
+        """
+
+        self.close()
+
+    # ======================================================
+    # String Representation
+    # ======================================================
+
+    def __repr__(self):
+
+        return (
+
+            f"{self.__class__.__name__}("
+
+            f"collection='{self.collection_name}', "
+
+            f"backend='{self.backend_name}', "
+
+            f"documents={self.count()})"
+
+        )
+
+    # ======================================================
+    # Length
+    # ======================================================
+
+    def __len__(self):
+
+        return self.count()
+
+    # ======================================================
+    # Contains
+    # ======================================================
+
+    def __contains__(
+        self,
+        document_id: str,
+    ) -> bool:
+
+        return self.get_document(document_id) is not None
+
+    # ======================================================
+    # Iterator
+    # ======================================================
+
+    def __iter__(self):
+        """
+        Iterate over all stored documents.
+        """
+
+        return iter(self.get_documents())
+
+    # ======================================================
+    # Equality
+    # ======================================================
+
+    def __eq__(
+        self,
+        other,
+    ):
+
+        if not isinstance(
+            other,
+            BaseVectorStore,
+        ):
+            return False
+
+        return (
+
+            self.collection_name
+            == other.collection_name
+
+            and
+
+            self.backend_name
+            == other.backend_name
+
+        )
+
+    # ======================================================
+    # Hash
+    # ======================================================
+
+    def __hash__(self):
+
+        return hash(
+
+            (
+
+                self.collection_name,
+
+                self.backend_name,
+
+            )
+
+        )
