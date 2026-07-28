@@ -385,3 +385,231 @@ class BaseVectorStore(ABC):
         """
 
         return self.count() == 0
+
+    # ======================================================
+    # Health Check
+    # ======================================================
+
+    @abstractmethod
+    def health(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Return health status of the vector store.
+
+        Example:
+        {
+            "status": "healthy",
+            "collection": "...",
+            "documents": 1250,
+            "backend": "FAISS"
+        }
+        """
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    @abstractmethod
+    def diagnostics(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Return diagnostic information about the store.
+        """
+
+    # ======================================================
+    # Statistics
+    # ======================================================
+
+    @abstractmethod
+    def statistics(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Return usage statistics.
+        """
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    @abstractmethod
+    def benchmark(
+        self,
+        num_queries: int = 100,
+        top_k: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Benchmark retrieval performance.
+        """
+
+    # ======================================================
+    # Validation
+    # ======================================================
+
+    @abstractmethod
+    def validate(
+        self,
+    ) -> bool:
+        """
+        Validate internal index consistency.
+        """
+
+    # ======================================================
+    # Optimize Index
+    # ======================================================
+
+    @abstractmethod
+    def optimize(
+        self,
+    ) -> None:
+        """
+        Optimize index for faster retrieval.
+        """
+
+    # ======================================================
+    # Backup
+    # ======================================================
+
+    @abstractmethod
+    def backup(
+        self,
+        destination: str,
+    ) -> None:
+        """
+        Backup vector store.
+        """
+
+    # ======================================================
+    # Restore
+    # ======================================================
+
+    @abstractmethod
+    def restore(
+        self,
+        source: str,
+    ) -> None:
+        """
+        Restore vector store.
+        """
+
+    # ======================================================
+    # Export
+    # ======================================================
+
+    @abstractmethod
+    def export(
+        self,
+    ) -> List[VectorDocument]:
+        """
+        Export all stored documents.
+        """
+
+    # ======================================================
+    # Import
+    # ======================================================
+
+    @abstractmethod
+    def import_documents(
+        self,
+        documents: List[VectorDocument],
+    ) -> None:
+        """
+        Import previously exported documents.
+        """
+
+    # ======================================================
+    # Index Information
+    # ======================================================
+
+    @abstractmethod
+    def index_information(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Return backend-specific index information.
+        """
+
+    # ======================================================
+    # Supports Metadata Filters
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def supports_metadata_filtering(
+        self,
+    ) -> bool:
+        """
+        Whether backend supports metadata filtering.
+        """
+
+    # ======================================================
+    # Supports Hybrid Search
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def supports_hybrid_search(
+        self,
+    ) -> bool:
+        """
+        Whether backend supports hybrid search.
+        """
+
+    # ======================================================
+    # Supports Persistence
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def supports_persistence(
+        self,
+    ) -> bool:
+        """
+        Whether backend supports persistence.
+        """
+
+    # ======================================================
+    # Supports Deletion
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def supports_deletion(
+        self,
+    ) -> bool:
+        """
+        Whether backend supports deleting vectors.
+        """
+
+    # ======================================================
+    # Backend Name
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def backend_name(
+        self,
+    ) -> str:
+        """
+        Backend implementation name.
+
+        Example:
+            FAISS
+            ChromaDB
+            Qdrant
+        """
+
+    # ======================================================
+    # Embedding Dimension
+    # ======================================================
+
+    @property
+    @abstractmethod
+    def embedding_dimension(
+        self,
+    ) -> int:
+        """
+        Embedding vector dimension.
+        """
