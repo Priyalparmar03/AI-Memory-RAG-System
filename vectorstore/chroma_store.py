@@ -965,3 +965,335 @@ class ChromaStore(BaseVectorStore):
             ),
 
         }
+
+    # ======================================================
+    # Save
+    # ======================================================
+
+    def save(
+        self,
+        path: str,
+    ) -> None:
+        """
+        Persist collection.
+
+        Chroma PersistentClient automatically
+        persists changes, so this validates the
+        persistence directory.
+        """
+
+        path = Path(path)
+
+        path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        logger.info(
+            "Collection already persisted at %s",
+            self.persist_directory,
+        )
+
+    # ======================================================
+    # Load
+    # ======================================================
+
+    def load(
+        self,
+        path: str,
+    ) -> None:
+        """
+        Load another persistence directory.
+        """
+
+        self.persist_directory = Path(path)
+
+        self.client = chromadb.PersistentClient(
+            path=str(self.persist_directory),
+        )
+
+        self.collection = self.client.get_or_create_collection(
+            name=self.collection_name
+        )
+
+        logger.info(
+            "Loaded collection '%s'",
+            self.collection_name,
+        )
+
+    # ======================================================
+    # Flush
+    # ======================================================
+
+    def flush(
+        self,
+    ) -> None:
+        """
+        Flush pending writes.
+
+        PersistentClient automatically flushes,
+        therefore nothing is required.
+        """
+
+        logger.debug(
+            "Flush requested (automatic in ChromaDB)."
+        )
+
+    # ======================================================
+    # Validate
+    # ======================================================
+
+    def validate(
+        self,
+    ) -> bool:
+        """
+        Validate collection integrity.
+        """
+
+        try:
+
+            self.collection.count()
+
+            return True
+
+        except Exception as exc:
+
+            logger.exception(exc)
+
+            return False
+
+    # ======================================================
+    # Optimize
+    # ======================================================
+
+    def optimize(
+        self,
+    ) -> None:
+        """
+        Placeholder for future optimization.
+        """
+
+        logger.info(
+            "Optimization handled internally by ChromaDB."
+        )
+
+    # ======================================================
+    # Backup
+    # ======================================================
+
+    def backup(
+        self,
+        destination: str,
+    ) -> None:
+        """
+        Backup persistence directory.
+        """
+
+        import shutil
+
+        destination = Path(destination)
+
+        if destination.exists():
+
+            shutil.rmtree(destination)
+
+        shutil.copytree(
+
+            self.persist_directory,
+
+            destination,
+
+        )
+
+        logger.info(
+            "Backup created at %s",
+            destination,
+        )
+
+    # ======================================================
+    # Restore
+    # ======================================================
+
+    def restore(
+        self,
+        source: str,
+    ) -> None:
+        """
+        Restore persistence directory.
+        """
+
+        import shutil
+
+        source = Path(source)
+
+        if not source.exists():
+
+            raise VectorStoreError(
+                f"Backup not found: {source}"
+            )
+
+        if self.persist_directory.exists():
+
+            shutil.rmtree(
+                self.persist_directory
+            )
+
+        shutil.copytree(
+
+            source,
+
+            self.persist_directory,
+
+        )
+
+        self.load(
+            str(self.persist_directory)
+        )
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    def reset(
+        self,
+    ) -> None:
+        """
+        Remove all vectors while preserving
+        the collection.
+        """
+
+        self.clear()
+
+        logger.info(
+            "Collection reset."
+        )
+
+    # ======================================================
+    # Index Information
+    # ======================================================
+
+    def index_information(
+        self,
+    ) -> Dict[str, Any]:
+
+        return {
+
+            "backend": "ChromaDB",
+
+            "collection": self.collection_name,
+
+            "dimension": self._dimension,
+
+            "documents": self.count(),
+
+            "persist_directory": str(
+                self.persist_directory
+            ),
+
+            "distance_metric": "cosine",
+
+        }
+
+    # ======================================================
+    # Backend Properties
+    # ======================================================
+
+    @property
+    def backend_name(
+        self,
+    ) -> str:
+
+        return "ChromaDB"
+
+    @property
+    def embedding_dimension(
+        self,
+    ) -> int:
+
+        return self._dimension
+
+    @property
+    def supports_metadata_filtering(
+        self,
+    ) -> bool:
+
+        return True
+
+    @property
+    def supports_hybrid_search(
+        self,
+    ) -> bool:
+
+        return False
+
+    @property
+    def supports_persistence(
+        self,
+    ) -> bool:
+
+        return True
+
+    @property
+    def supports_deletion(
+        self,
+    ) -> bool:
+
+        return True
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(
+        self,
+    ) -> None:
+        """
+        Release resources.
+        """
+
+        logger.info(
+            "Closing ChromaStore..."
+        )
+
+        self.collection = None
+
+        self.client = None
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # Representation
+    # ======================================================
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return (
+
+            "ChromaStore("
+
+            f"collection='{self.collection_name}', "
+
+            f"documents={self.count()}, "
+
+            f"dimension={self._dimension}"
+
+            ")"
+
+        )
