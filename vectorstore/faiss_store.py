@@ -831,3 +831,269 @@ def benchmark(
         ),
 
     }
+
+
+    # ======================================================
+    # Save Index
+    # ======================================================
+
+    def save(
+        self,
+        path: Optional[str] = None,
+    ) -> None:
+        """
+        Save FAISS index, metadata and configuration.
+        """
+
+        save_dir = Path(path) if path else self.persist_directory
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        # GPU index must be moved to CPU before saving
+        index = self.index
+        if self.use_gpu:
+            index = faiss.index_gpu_to_cpu(index)
+
+        faiss.write_index(
+            index,
+            str(save_dir / "index.faiss"),
+        )
+
+        with open(save_dir / "documents.pkl", "wb") as f:
+            pickle.dump(self.id_to_doc, f)
+
+        with open(save_dir / "doc_to_faiss.pkl", "wb") as f:
+            pickle.dump(self.doc_to_faiss, f)
+
+        with open(save_dir / "faiss_to_doc.pkl", "wb") as f:
+            pickle.dump(self.faiss_to_doc, f)
+
+        config = {
+            "dimension": self.dimension,
+            "metric": self.metric,
+            "index_type": self.index_type,
+            "use_gpu": self.use_gpu,
+            "collection": self.collection_name,
+        }
+
+        with open(save_dir / "config.json", "w") as f:
+            json.dump(config, f, indent=4)
+
+        logger.info("FAISS store saved successfully.")
+
+    # ======================================================
+    # Load Index
+    # ======================================================
+
+    def load(
+        self,
+        path: Optional[str] = None,
+    ) -> None:
+        """
+        Load FAISS index and metadata.
+        """
+
+        load_dir = Path(path) if path else self.persist_directory
+
+        self.index = faiss.read_index(
+            str(load_dir / "index.faiss")
+        )
+
+        with open(load_dir / "documents.pkl", "rb") as f:
+            self.id_to_doc = pickle.load(f)
+
+        with open(load_dir / "doc_to_faiss.pkl", "rb") as f:
+            self.doc_to_faiss = pickle.load(f)
+
+        with open(load_dir / "faiss_to_doc.pkl", "rb") as f:
+            self.faiss_to_doc = pickle.load(f)
+
+        with open(load_dir / "config.json") as f:
+            config = json.load(f)
+
+        self.dimension = config["dimension"]
+        self.metric = config["metric"]
+        self.index_type = config["index_type"]
+
+        if self.use_gpu:
+            self._to_gpu()
+
+        logger.info("FAISS store loaded successfully.")
+
+    # ======================================================
+    # Flush
+    # ======================================================
+
+    def flush(
+        self,
+    ) -> None:
+        """
+        Persist current state.
+        """
+
+        self.save()
+
+    # ======================================================
+    # Backup
+    # ======================================================
+
+    def backup(
+        self,
+        destination: str,
+    ) -> None:
+        """
+        Create backup.
+        """
+
+        self.save()
+
+        destination = Path(destination)
+
+        if destination.exists():
+            import shutil
+            shutil.rmtree(destination)
+
+        import shutil
+
+        shutil.copytree(
+            self.persist_directory,
+            destination,
+        )
+
+        logger.info(
+            "Backup created at %s",
+            destination,
+        )
+
+    # ======================================================
+    # Restore
+    # ======================================================
+
+    def restore(
+        self,
+        source: str,
+    ) -> None:
+        """
+        Restore from backup.
+        """
+
+        import shutil
+
+        source = Path(source)
+
+        if not source.exists():
+            raise VectorStoreError(
+                f"Backup not found: {source}"
+            )
+
+        if self.persist_directory.exists():
+            shutil.rmtree(self.persist_directory)
+
+        shutil.copytree(
+            source,
+            self.persist_directory,
+        )
+
+        self.load()
+
+        logger.info("Restore completed.")
+
+    # ======================================================
+    # Optimize
+    # ======================================================
+
+    def optimize(
+        self,
+    ) -> None:
+        """
+        Optimize FAISS index.
+        """
+
+        if hasattr(self.index, "make_direct_map"):
+            try:
+                self.index.make_direct_map()
+            except Exception:
+                pass
+
+        logger.info("Optimization complete.")
+
+    # ======================================================
+    # Rebuild
+    # ======================================================
+
+    def rebuild(
+        self,
+    ) -> None:
+        """
+        Rebuild the index.
+        """
+
+        self._rebuild_index()
+
+        logger.info("Index rebuilt.")
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    def reset(
+        self,
+    ) -> None:
+        """
+        Remove every stored vector.
+        """
+
+        self.clear()
+
+        logger.info("Collection reset.")
+
+    # ======================================================
+    # Validate
+    # ======================================================
+
+    def validate(
+        self,
+    ) -> bool:
+        """
+        Validate store consistency.
+        """
+
+        if self.count() != len(self.id_to_doc):
+            return False
+
+        if len(self.doc_to_faiss) != len(self.id_to_doc):
+            return False
+
+        if len(self.faiss_to_doc) != len(self.id_to_doc):
+            return False
+
+        return True
+
+    # ======================================================
+    # Index Information
+    # ======================================================
+
+    def index_information(
+        self,
+    ) -> Dict[str, Any]:
+
+        return {
+
+            "backend": "FAISS",
+
+            "index_type": self.index_type,
+
+            "metric": self.metric,
+
+            "dimension": self.dimension,
+
+            "vectors": self.count(),
+
+            "gpu": self.use_gpu,
+
+            "trained": getattr(
+                self.index,
+                "is_trained",
+                True,
+            ),
+
+        }
