@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Optional
 import chromadb
 from chromadb.config import Settings
 from chromadb.api.models.Collection import Collection
-
+import random
+import time
 from .base_store import (
     BaseVectorStore,
     SearchResult,
@@ -501,3 +502,466 @@ class ChromaStore(BaseVectorStore):
 
             )
             
+    # ======================================================
+    # Similarity Search
+    # ======================================================
+
+    def similarity_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+    ) -> List[SearchResult]:
+        """
+        Search using an embedding vector.
+        """
+
+        try:
+
+            results = self.collection.query(
+
+                query_embeddings=[query_embedding],
+
+                n_results=k,
+
+                include=[
+                    "documents",
+                    "metadatas",
+                    "distances",
+                ],
+
+            )
+
+            output = []
+
+            ids = results.get("ids", [[]])[0]
+            docs = results.get("documents", [[]])[0]
+            metas = results.get("metadatas", [[]])[0]
+            distances = results.get("distances", [[]])[0]
+
+            for doc_id, doc, meta, distance in zip(
+                ids,
+                docs,
+                metas,
+                distances,
+            ):
+
+                score = 1.0 - float(distance)
+
+                if (
+                    score_threshold is not None
+                    and score < score_threshold
+                ):
+                    continue
+
+                output.append(
+
+                    SearchResult(
+
+                        id=doc_id,
+
+                        score=score,
+
+                        document=doc,
+
+                        metadata=meta or {},
+
+                    )
+
+                )
+
+            return output
+
+        except Exception as exc:
+
+            logger.exception(exc)
+
+            raise VectorStoreError(
+
+                f"Similarity search failed: {exc}"
+
+            )
+
+    # ======================================================
+    # Similarity Search From Text
+    # ======================================================
+
+    def similarity_search_text(
+        self,
+        query: str,
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+    ) -> List[SearchResult]:
+        """
+        Text-based similarity search.
+
+        Requires Chroma embedding function.
+        """
+
+        results = self.collection.query(
+
+            query_texts=[query],
+
+            n_results=k,
+
+            include=[
+                "documents",
+                "metadatas",
+                "distances",
+            ],
+
+        )
+
+        output = []
+
+        ids = results["ids"][0]
+        docs = results["documents"][0]
+        metas = results["metadatas"][0]
+        distances = results["distances"][0]
+
+        for doc_id, doc, meta, distance in zip(
+
+            ids,
+            docs,
+            metas,
+            distances,
+
+        ):
+
+            score = 1.0 - float(distance)
+
+            if (
+                score_threshold is not None
+                and score < score_threshold
+            ):
+                continue
+
+            output.append(
+
+                SearchResult(
+
+                    id=doc_id,
+
+                    score=score,
+
+                    document=doc,
+
+                    metadata=meta or {},
+
+                )
+
+            )
+
+        return output
+
+    # ======================================================
+    # Metadata Search
+    # ======================================================
+
+    def search_by_metadata(
+        self,
+        filters: Dict[str, Any],
+        limit: int = 100,
+    ) -> List[VectorDocument]:
+        """
+        Filter by metadata.
+        """
+
+        results = self.collection.get(
+
+            where=filters,
+
+            limit=limit,
+
+            include=[
+                "documents",
+                "embeddings",
+                "metadatas",
+            ],
+
+        )
+
+        documents = []
+
+        for i in range(
+
+            len(results["ids"])
+
+        ):
+
+            documents.append(
+
+                VectorDocument(
+
+                    id=results["ids"][i],
+
+                    text=results["documents"][i],
+
+                    embedding=results["embeddings"][i],
+
+                    metadata=results["metadatas"][i] or {},
+
+                )
+
+            )
+
+        return documents
+
+    # ======================================================
+    # Batch Search
+    # ======================================================
+
+    def batch_search(
+        self,
+        query_embeddings: List[List[float]],
+        k: int = 5,
+    ) -> List[List[SearchResult]]:
+        """
+        Search multiple embedding queries.
+        """
+
+        all_results = []
+
+        for embedding in query_embeddings:
+
+            all_results.append(
+
+                self.similarity_search(
+
+                    embedding,
+
+                    k,
+
+                )
+
+            )
+
+        return all_results
+
+    # ======================================================
+    # Hybrid Search
+    # ======================================================
+
+    def hybrid_search(
+        self,
+        query: str,
+        query_embedding: List[float],
+        k: int = 5,
+        alpha: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Hybrid search placeholder.
+
+        Full implementation belongs in search.py.
+        """
+
+        return self.similarity_search(
+
+            query_embedding,
+
+            k,
+
+        )
+
+    # ======================================================
+    # Range Search
+    # ======================================================
+
+    def range_search(
+        self,
+        query_embedding: List[float],
+        radius: float,
+    ) -> List[SearchResult]:
+        """
+        Return all vectors above threshold.
+        """
+
+        results = self.similarity_search(
+
+            query_embedding,
+
+            k=self.count(),
+
+        )
+
+        return [
+
+            r
+
+            for r in results
+
+            if r.score >= radius
+
+        ]
+
+    # ======================================================
+    # MMR Search
+    # ======================================================
+
+    def mmr_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Placeholder.
+
+        Full MMR is implemented in search.py.
+        """
+
+        return self.similarity_search(
+
+            query_embedding,
+
+            fetch_k,
+
+        )[:k]
+
+    # ======================================================
+    # Statistics
+    # ======================================================
+
+    def statistics(
+        self,
+    ) -> Dict[str, Any]:
+
+        return {
+
+            "backend": "ChromaDB",
+
+            "collection": self.collection_name,
+
+            "documents": self.count(),
+
+            "dimension": self._dimension,
+
+            "persist_directory": str(
+
+                self.persist_directory
+
+            ),
+
+        }
+
+    # ======================================================
+    # Health
+    # ======================================================
+
+    def health(
+        self,
+    ) -> Dict[str, Any]:
+
+        try:
+
+            self.collection.count()
+
+            return {
+
+                "status": "healthy",
+
+                "backend": "ChromaDB",
+
+                "collection": self.collection_name,
+
+                "documents": self.count(),
+
+            }
+
+        except Exception as exc:
+
+            return {
+
+                "status": "failed",
+
+                "error": str(exc),
+
+            }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(
+        self,
+    ) -> Dict[str, Any]:
+
+        return {
+
+            "health": self.health(),
+
+            "statistics": self.statistics(),
+
+            "collections": self.list_collections(),
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        num_queries: int = 100,
+        top_k: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Benchmark retrieval latency.
+        """
+
+        if self.count() == 0:
+
+            return {
+
+                "status": "empty_collection"
+
+            }
+
+        dummy = [
+
+            random.random()
+
+            for _ in range(
+
+                self._dimension
+
+            )
+
+        ]
+
+        start = time.perf_counter()
+
+        for _ in range(num_queries):
+
+            self.similarity_search(
+
+                dummy,
+
+                top_k,
+
+            )
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "queries": num_queries,
+
+            "seconds": round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+            "queries_per_second": round(
+
+                num_queries / elapsed,
+
+                2,
+
+            ),
+
+        }
