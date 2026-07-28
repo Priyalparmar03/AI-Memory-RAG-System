@@ -1097,3 +1097,194 @@ def benchmark(
             ),
 
         }
+    # ======================================================
+    # Backend Properties
+    # ======================================================
+
+    @property
+    def backend_name(self) -> str:
+        """Return backend name."""
+        return "FAISS"
+
+    @property
+    def embedding_dimension(self) -> int:
+        """Embedding dimension."""
+        return self.dimension
+
+    @property
+    def supports_metadata_filtering(self) -> bool:
+        return True
+
+    @property
+    def supports_hybrid_search(self) -> bool:
+        return False
+
+    @property
+    def supports_persistence(self) -> bool:
+        return True
+
+    @property
+    def supports_deletion(self) -> bool:
+        return True
+
+    # ======================================================
+    # Memory Usage
+    # ======================================================
+
+    def memory_usage(self) -> Dict[str, Any]:
+        """
+        Approximate memory usage.
+        """
+
+        vectors = self.count() * self.dimension * 4
+
+        return {
+
+            "documents": len(self.id_to_doc),
+
+            "vectors": self.count(),
+
+            "embedding_dimension": self.dimension,
+
+            "estimated_vector_memory_mb":
+                round(vectors / (1024 * 1024), 2),
+
+        }
+
+    # ======================================================
+    # Runtime Statistics
+    # ======================================================
+
+    def runtime_statistics(self) -> Dict[str, Any]:
+
+        return {
+
+            "backend": "FAISS",
+
+            "index_type": self.index_type,
+
+            "metric": self.metric,
+
+            "gpu": self.use_gpu,
+
+            "trained": getattr(
+                self.index,
+                "is_trained",
+                True,
+            ),
+
+            "vectors": self.count(),
+
+            "documents": len(self.id_to_doc),
+
+        }
+
+    # ======================================================
+    # Advanced Diagnostics
+    # ======================================================
+
+    def advanced_diagnostics(self) -> Dict[str, Any]:
+        """
+        Complete diagnostics.
+        """
+
+        return {
+
+            "health": self.health(),
+
+            "statistics": self.statistics(),
+
+            "memory": self.memory_usage(),
+
+            "runtime": self.runtime_statistics(),
+
+            "validation": self.validate(),
+
+        }
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(self) -> None:
+        """
+        Release resources.
+        """
+
+        if self.use_gpu:
+
+            self._to_cpu()
+
+        self.index = None
+
+        self.id_to_doc.clear()
+
+        self.doc_to_faiss.clear()
+
+        self.faiss_to_doc.clear()
+
+        logger.info(
+            "FAISS store closed."
+        )
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # Python Protocols
+    # ======================================================
+
+    def __len__(self):
+
+        return self.count()
+
+    def __contains__(
+        self,
+        document_id: str,
+    ):
+
+        return document_id in self.id_to_doc
+
+    def __iter__(self):
+
+        return iter(
+            self.id_to_doc.values()
+        )
+
+    def __repr__(self):
+
+        return (
+
+            "FaissStore("
+
+            f"collection='{self.collection_name}', "
+
+            f"backend='FAISS', "
+
+            f"documents={self.count()}, "
+
+            f"dimension={self.dimension}, "
+
+            f"metric='{self.metric}', "
+
+            f"index='{self.index_type}', "
+
+            f"gpu={self.use_gpu}"
+
+            ")"
+
+        )
