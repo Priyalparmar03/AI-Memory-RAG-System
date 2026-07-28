@@ -194,3 +194,194 @@ class BaseVectorStore(ABC):
         """
         Number of stored documents.
         """
+
+    # ======================================================
+    # Similarity Search
+    # ======================================================
+
+    @abstractmethod
+    def similarity_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+    ) -> List[SearchResult]:
+        """
+        Search using an embedding vector.
+        """
+
+    # ======================================================
+    # Text Search
+    # ======================================================
+
+    @abstractmethod
+    def similarity_search_text(
+        self,
+        query: str,
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+    ) -> List[SearchResult]:
+        """
+        Search using raw text.
+        Implementations should embed the query internally.
+        """
+
+    # ======================================================
+    # Hybrid Search
+    # ======================================================
+
+    @abstractmethod
+    def hybrid_search(
+        self,
+        query: str,
+        query_embedding: List[float],
+        k: int = 5,
+        alpha: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Hybrid search combining lexical and vector similarity.
+        """
+
+    # ======================================================
+    # Metadata Search
+    # ======================================================
+
+    @abstractmethod
+    def search_by_metadata(
+        self,
+        filters: Dict[str, Any],
+        limit: int = 100,
+    ) -> List[VectorDocument]:
+        """
+        Search documents using metadata filters.
+        """
+
+    # ======================================================
+    # Range Search
+    # ======================================================
+
+    @abstractmethod
+    def range_search(
+        self,
+        query_embedding: List[float],
+        radius: float,
+    ) -> List[SearchResult]:
+        """
+        Return all vectors within a similarity/distance threshold.
+        """
+
+    # ======================================================
+    # Maximum Marginal Relevance (MMR)
+    # ======================================================
+
+    @abstractmethod
+    def mmr_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Diversity-aware retrieval.
+        """
+
+    # ======================================================
+    # Batch Search
+    # ======================================================
+
+    @abstractmethod
+    def batch_search(
+        self,
+        query_embeddings: List[List[float]],
+        k: int = 5,
+    ) -> List[List[SearchResult]]:
+        """
+        Search multiple queries simultaneously.
+        """
+
+    # ======================================================
+    # Search by IDs
+    # ======================================================
+
+    @abstractmethod
+    def get_by_ids(
+        self,
+        ids: List[str],
+    ) -> List[VectorDocument]:
+        """
+        Retrieve documents using IDs.
+        """
+
+    # ======================================================
+    # Collection Statistics
+    # ======================================================
+
+    @abstractmethod
+    def collection_statistics(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Statistics about the collection.
+        """
+
+    # ======================================================
+    # List Collections
+    # ======================================================
+
+    @abstractmethod
+    def list_collections(
+        self,
+    ) -> List[str]:
+        """
+        Return available collections.
+        """
+
+    # ======================================================
+    # Rename Collection
+    # ======================================================
+
+    @abstractmethod
+    def rename_collection(
+        self,
+        new_name: str,
+    ) -> None:
+        """
+        Rename collection.
+        """
+
+    # ======================================================
+    # Clear Collection
+    # ======================================================
+
+    @abstractmethod
+    def clear(
+        self,
+    ) -> None:
+        """
+        Remove all stored vectors while keeping the collection.
+        """
+
+    # ======================================================
+    # Collection Size
+    # ======================================================
+
+    @property
+    def size(self) -> int:
+        """
+        Alias for count().
+        """
+
+        return self.count()
+
+    # ======================================================
+    # Is Empty
+    # ======================================================
+
+    @property
+    def is_empty(self) -> bool:
+        """
+        Check whether the collection is empty.
+        """
+
+        return self.count() == 0
