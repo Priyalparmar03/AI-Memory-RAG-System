@@ -1524,3 +1524,207 @@ class QdrantStore(BaseVectorStore):
             "Collection reset."
 
         )
+
+    # ======================================================
+    # Backend Properties
+    # ======================================================
+
+    @property
+    def backend_name(self) -> str:
+        """Backend name."""
+        return "Qdrant"
+
+    @property
+    def embedding_dimension(self) -> int:
+        """Embedding dimension."""
+        return self.config.vector_size
+
+    @property
+    def supports_metadata_filtering(self) -> bool:
+        return True
+
+    @property
+    def supports_hybrid_search(self) -> bool:
+        return True
+
+    @property
+    def supports_persistence(self) -> bool:
+        return True
+
+    @property
+    def supports_deletion(self) -> bool:
+        return True
+
+    # ======================================================
+    # Memory Usage
+    # ======================================================
+
+    def memory_usage(self) -> Dict[str, Any]:
+        """
+        Approximate vector memory usage.
+        """
+
+        vectors = self.count()
+
+        estimated = (
+            vectors
+            * self.config.vector_size
+            * 4
+        )
+
+        return {
+
+            "documents": vectors,
+
+            "vector_dimension": self.config.vector_size,
+
+            "estimated_memory_mb": round(
+                estimated / (1024 * 1024),
+                2,
+            ),
+
+            "backend": "Qdrant",
+
+        }
+
+    # ======================================================
+    # Runtime Statistics
+    # ======================================================
+
+    def runtime_statistics(
+        self,
+    ) -> Dict[str, Any]:
+
+        info = self.client.get_collection(
+            self.collection_name
+        )
+
+        return {
+
+            "backend": "Qdrant",
+
+            "host": self.config.host,
+
+            "port": self.config.port,
+
+            "grpc": self.config.prefer_grpc,
+
+            "points": info.points_count,
+
+            "segments": info.segments_count,
+
+            "distance": self.config.distance,
+
+            "vector_size": self.config.vector_size,
+
+        }
+
+    # ======================================================
+    # Advanced Diagnostics
+    # ======================================================
+
+    def advanced_diagnostics(
+        self,
+    ) -> Dict[str, Any]:
+
+        return {
+
+            "health": self.health(),
+
+            "statistics": self.statistics(),
+
+            "runtime": self.runtime_statistics(),
+
+            "memory": self.memory_usage(),
+
+            "validation": self.validate(),
+
+            "collections": self.list_collections(),
+
+        }
+
+    # ======================================================
+    # Close
+    # ======================================================
+
+    def close(
+        self,
+    ) -> None:
+        """
+        Close client connection.
+        """
+
+        try:
+
+            self.client.close()
+
+        except Exception:
+
+            pass
+
+        logger.info(
+            "QdrantStore closed."
+        )
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
+
+        self.close()
+
+    # ======================================================
+    # Python Protocols
+    # ======================================================
+
+    def __len__(self):
+
+        return self.count()
+
+    def __contains__(
+        self,
+        document_id: str,
+    ):
+
+        return self.get_document(
+            document_id
+        ) is not None
+
+    def __iter__(self):
+
+        return iter(
+            self.get_documents()
+        )
+
+    def __repr__(self):
+
+        return (
+
+            "QdrantStore("
+
+            f"collection='{self.collection_name}', "
+
+            f"backend='Qdrant', "
+
+            f"documents={self.count()}, "
+
+            f"dimension={self.config.vector_size}, "
+
+            f"distance='{self.config.distance}', "
+
+            f"host='{self.config.host}:{self.config.port}'"
+
+            ")"
+
+        )
+
