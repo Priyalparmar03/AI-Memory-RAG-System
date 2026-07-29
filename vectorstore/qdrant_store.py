@@ -15,7 +15,14 @@ from qdrant_client.http.models import (
     Distance,
     OptimizersConfigDiff,
 )
-
+import random
+import time
+from qdrant_client.http.models import (
+    Filter,
+    FieldCondition,
+    MatchValue,
+    SearchRequest,
+)
 from .base_store import (
     BaseVectorStore,
     SearchResult,
@@ -663,4 +670,463 @@ class QdrantStore(BaseVectorStore):
             wait=True,
 
         )
+
+    # ======================================================
+    # Similarity Search
+    # ======================================================
+
+    def similarity_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[SearchResult]:
+        """
+        Dense vector similarity search.
+        """
+
+        query_filter = None
+
+        if filters:
+
+            query_filter = Filter(
+
+                must=[
+
+                    FieldCondition(
+
+                        key=key,
+
+                        match=MatchValue(value=value),
+
+                    )
+
+                    for key, value in filters.items()
+
+                ]
+
+            )
+
+        results = self.client.search(
+
+            collection_name=self.collection_name,
+
+            query_vector=query_embedding,
+
+            query_filter=query_filter,
+
+            limit=k,
+
+            with_payload=True,
+
+            with_vectors=True,
+
+        )
+
+        output = []
+
+        for point in results:
+
+            if (
+                score_threshold is not None
+                and point.score < score_threshold
+            ):
+                continue
+
+            payload = dict(point.payload or {})
+
+            output.append(
+
+                SearchResult(
+
+                    id=str(point.id),
+
+                    score=float(point.score),
+
+                    document=payload.pop("text", ""),
+
+                    metadata=payload,
+
+                    embedding=point.vector,
+
+                )
+
+            )
+
+        return output
+
+    # ======================================================
+    # Similarity Search (Text)
+    # ======================================================
+
+    def similarity_search_text(
+        self,
+        query: str,
+        embedding_function,
+        k: int = 5,
+        score_threshold: Optional[float] = None,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[SearchResult]:
+
+        embedding = embedding_function(query)
+
+        return self.similarity_search(
+
+            embedding,
+
+            k,
+
+            score_threshold,
+
+            filters,
+
+        )
+
+    # ======================================================
+    # Metadata Search
+    # ======================================================
+
+    def search_by_metadata(
+        self,
+        filters: Dict[str, Any],
+        limit: int = 100,
+    ) -> List[VectorDocument]:
+
+        query_filter = Filter(
+
+            must=[
+
+                FieldCondition(
+
+                    key=key,
+
+                    match=MatchValue(value=value),
+
+                )
+
+                for key, value in filters.items()
+
+            ]
+
+        )
+
+        points, _ = self.client.scroll(
+
+            collection_name=self.collection_name,
+
+            scroll_filter=query_filter,
+
+            with_payload=True,
+
+            with_vectors=True,
+
+            limit=limit,
+
+        )
+
+        documents = []
+
+        for point in points:
+
+            payload = dict(point.payload or {})
+
+            documents.append(
+
+                VectorDocument(
+
+                    id=str(point.id),
+
+                    text=payload.pop("text", ""),
+
+                    embedding=point.vector,
+
+                    metadata=payload,
+
+                )
+
+            )
+
+        return documents
+
+    # ======================================================
+    # Batch Search
+    # ======================================================
+
+    def batch_search(
+        self,
+        query_embeddings: List[List[float]],
+        k: int = 5,
+    ) -> List[List[SearchResult]]:
+
+        requests = [
+
+            SearchRequest(
+
+                vector=vector,
+
+                limit=k,
+
+                with_payload=True,
+
+                with_vector=True,
+
+            )
+
+            for vector in query_embeddings
+
+        ]
+
+        responses = self.client.search_batch(
+
+            collection_name=self.collection_name,
+
+            requests=requests,
+
+        )
+
+        output = []
+
+        for response in responses:
+
+            batch = []
+
+            for point in response:
+
+                payload = dict(point.payload or {})
+
+                batch.append(
+
+                    SearchResult(
+
+                        id=str(point.id),
+
+                        score=float(point.score),
+
+                        document=payload.pop("text", ""),
+
+                        metadata=payload,
+
+                        embedding=point.vector,
+
+                    )
+
+                )
+
+            output.append(batch)
+
+        return output
+
+    # ======================================================
+    # Range Search
+    # ======================================================
+
+    def range_search(
+        self,
+        query_embedding: List[float],
+        radius: float,
+    ) -> List[SearchResult]:
+
+        results = self.similarity_search(
+
+            query_embedding,
+
+            self.count(),
+
+        )
+
+        return [
+
+            result
+
+            for result in results
+
+            if result.score >= radius
+
+        ]
+
+    # ======================================================
+    # Hybrid Search
+    # ======================================================
+
+    def hybrid_search(
+        self,
+        query: str,
+        query_embedding: List[float],
+        k: int = 5,
+        alpha: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Placeholder.
+
+        Full hybrid search will be
+        implemented in search.py.
+        """
+
+        return self.similarity_search(
+
+            query_embedding,
+
+            k,
+
+        )
+
+    # ======================================================
+    # Maximum Marginal Relevance
+    # ======================================================
+
+    def mmr_search(
+        self,
+        query_embedding: List[float],
+        k: int = 5,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+    ) -> List[SearchResult]:
+        """
+        Placeholder.
+
+        MMR belongs in search.py.
+        """
+
+        return self.similarity_search(
+
+            query_embedding,
+
+            fetch_k,
+
+        )[:k]
+
+    # ======================================================
+    # Statistics
+    # ======================================================
+
+    def statistics(self) -> Dict[str, Any]:
+
+        return {
+
+            "backend": "Qdrant",
+
+            "collection": self.collection_name,
+
+            "documents": self.count(),
+
+            "vector_size": self.config.vector_size,
+
+            "distance": self.config.distance,
+
+            "grpc": self.config.prefer_grpc,
+
+            "host": self.config.host,
+
+        }
+
+    # ======================================================
+    # Health
+    # ======================================================
+
+    def health(self) -> Dict[str, Any]:
+
+        try:
+
+            self.client.get_collection(
+
+                self.collection_name
+
+            )
+
+            return {
+
+                "status": "healthy",
+
+                "backend": "Qdrant",
+
+                "documents": self.count(),
+
+            }
+
+        except Exception as exc:
+
+            return {
+
+                "status": "failed",
+
+                "error": str(exc),
+
+            }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(self) -> Dict[str, Any]:
+
+        return {
+
+            "statistics": self.statistics(),
+
+            "health": self.health(),
+
+            "collections": self.list_collections(),
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        num_queries: int = 100,
+        top_k: int = 5,
+    ) -> Dict[str, Any]:
+
+        if self.count() == 0:
+
+            return {
+
+                "status": "empty_collection"
+
+            }
+
+        dummy = [
+
+            random.random()
+
+            for _ in range(
+
+                self.config.vector_size
+
+            )
+
+        ]
+
+        start = time.perf_counter()
+
+        for _ in range(num_queries):
+
+            self.similarity_search(
+
+                dummy,
+
+                top_k,
+
+            )
+
+        elapsed = time.perf_counter() - start
+
+        return {
+
+            "queries": num_queries,
+
+            "seconds": round(elapsed, 4),
+
+            "queries_per_second": round(
+
+                num_queries / elapsed,
+
+                2,
+
+            ),
+
+        }
 
