@@ -310,3 +310,357 @@ class QdrantStore(BaseVectorStore):
 
         }
 
+    # ======================================================
+    # Add Document
+    # ======================================================
+
+    def add_document(
+        self,
+        document: VectorDocument,
+    ) -> None:
+        """
+        Add a single document to Qdrant.
+        """
+
+        if document.embedding is None:
+
+            raise VectorStoreError(
+                "Document embedding is required."
+            )
+
+        point = PointStruct(
+
+            id=document.id,
+
+            vector=document.embedding,
+
+            payload={
+
+                "text": document.text,
+
+                **document.metadata,
+
+            },
+
+        )
+
+        self.client.upsert(
+
+            collection_name=self.collection_name,
+
+            points=[point],
+
+            wait=True,
+
+        )
+
+    # ======================================================
+    # Batch Insert
+    # ======================================================
+
+    def add_documents(
+        self,
+        documents: List[VectorDocument],
+    ) -> None:
+        """
+        Batch insert documents.
+        """
+
+        if not documents:
+            return
+
+        points = []
+
+        for doc in documents:
+
+            if doc.embedding is None:
+
+                raise VectorStoreError(
+                    f"Embedding missing for {doc.id}"
+                )
+
+            points.append(
+
+                PointStruct(
+
+                    id=doc.id,
+
+                    vector=doc.embedding,
+
+                    payload={
+
+                        "text": doc.text,
+
+                        **doc.metadata,
+
+                    },
+
+                )
+
+            )
+
+        self.client.upsert(
+
+            collection_name=self.collection_name,
+
+            points=points,
+
+            wait=True,
+
+        )
+
+    # ======================================================
+    # Update Document
+    # ======================================================
+
+    def update_document(
+        self,
+        document_id: str,
+        text: Optional[str] = None,
+        embedding: Optional[List[float]] = None,
+        metadata: Optional[Dict] = None,
+    ) -> None:
+        """
+        Update an existing document.
+        """
+
+        current = self.get_document(document_id)
+
+        if current is None:
+
+            raise VectorStoreError(
+
+                f"Document '{document_id}' not found."
+
+            )
+
+        updated = VectorDocument(
+
+            id=document_id,
+
+            text=text if text is not None else current.text,
+
+            embedding=(
+                embedding
+                if embedding is not None
+                else current.embedding
+            ),
+
+            metadata=(
+                metadata
+                if metadata is not None
+                else current.metadata
+            ),
+
+        )
+
+        self.add_document(updated)
+
+    # ======================================================
+    # Delete One
+    # ======================================================
+
+    def delete_document(
+        self,
+        document_id: str,
+    ) -> None:
+
+        self.client.delete(
+
+            collection_name=self.collection_name,
+
+            points_selector=[document_id],
+
+            wait=True,
+
+        )
+
+    # ======================================================
+    # Delete Many
+    # ======================================================
+
+    def delete_documents(
+        self,
+        ids: List[str],
+    ) -> None:
+
+        if not ids:
+            return
+
+        self.client.delete(
+
+            collection_name=self.collection_name,
+
+            points_selector=ids,
+
+            wait=True,
+
+        )
+
+    # ======================================================
+    # Get Document
+    # ======================================================
+
+    def get_document(
+        self,
+        document_id: str,
+    ) -> Optional[VectorDocument]:
+        """
+        Retrieve one document.
+        """
+
+        results = self.client.retrieve(
+
+            collection_name=self.collection_name,
+
+            ids=[document_id],
+
+            with_payload=True,
+
+            with_vectors=True,
+
+        )
+
+        if not results:
+
+            return None
+
+        point = results[0]
+
+        payload = point.payload or {}
+
+        return VectorDocument(
+
+            id=str(point.id),
+
+            text=payload.pop("text", ""),
+
+            embedding=point.vector,
+
+            metadata=payload,
+
+        )
+
+    # ======================================================
+    # Get Documents
+    # ======================================================
+
+    def get_documents(
+        self,
+        ids: Optional[List[str]] = None,
+    ) -> List[VectorDocument]:
+        """
+        Retrieve multiple documents.
+        """
+
+        if ids is None:
+
+            scroll, _ = self.client.scroll(
+
+                collection_name=self.collection_name,
+
+                with_vectors=True,
+
+                with_payload=True,
+
+                limit=self.count(),
+
+            )
+
+        else:
+
+            scroll = self.client.retrieve(
+
+                collection_name=self.collection_name,
+
+                ids=ids,
+
+                with_vectors=True,
+
+                with_payload=True,
+
+            )
+
+        documents = []
+
+        for point in scroll:
+
+            payload = point.payload or {}
+
+            documents.append(
+
+                VectorDocument(
+
+                    id=str(point.id),
+
+                    text=payload.pop("text", ""),
+
+                    embedding=point.vector,
+
+                    metadata=payload,
+
+                )
+
+            )
+
+        return documents
+
+    # ======================================================
+    # Get By IDs
+    # ======================================================
+
+    def get_by_ids(
+        self,
+        ids: List[str],
+    ) -> List[VectorDocument]:
+
+        return self.get_documents(ids)
+
+    # ======================================================
+    # Export
+    # ======================================================
+
+    def export(
+        self,
+    ) -> List[VectorDocument]:
+        """
+        Export every document.
+        """
+
+        return self.get_documents()
+
+    # ======================================================
+    # Import
+    # ======================================================
+
+    def import_documents(
+        self,
+        documents: List[VectorDocument],
+    ) -> None:
+        """
+        Import documents.
+        """
+
+        self.add_documents(documents)
+
+    # ======================================================
+    # Clear Collection
+    # ======================================================
+
+    def clear(
+        self,
+    ) -> None:
+        """
+        Remove every point from collection.
+        """
+
+        self.client.delete(
+
+            collection_name=self.collection_name,
+
+            points_selector=Filter(),
+
+            wait=True,
+
+        )
+
