@@ -29,7 +29,9 @@ from .base_store import (
     VectorDocument,
     VectorStoreError,
 )
-
+import json
+import shutil
+from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # ==========================================================
@@ -1130,3 +1132,395 @@ class QdrantStore(BaseVectorStore):
 
         }
 
+    # ======================================================
+    # Save
+    # ======================================================
+
+    def save(
+        self,
+        path: Optional[str] = None,
+    ) -> None:
+        """
+        Save local configuration.
+
+        Note:
+        Qdrant persists vectors automatically.
+        """
+
+        save_dir = Path(path or "./qdrant_backup")
+
+        save_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        config = {
+
+            "collection": self.collection_name,
+
+            "host": self.config.host,
+
+            "port": self.config.port,
+
+            "grpc_port": self.config.grpc_port,
+
+            "distance": self.config.distance,
+
+            "vector_size": self.config.vector_size,
+
+            "replication_factor": self.config.replication_factor,
+
+            "shard_number": self.config.shard_number,
+
+        }
+
+        with open(
+
+            save_dir / "config.json",
+
+            "w",
+
+        ) as file:
+
+            json.dump(
+
+                config,
+
+                file,
+
+                indent=4,
+
+            )
+
+        logger.info(
+
+            "Configuration saved."
+
+        )
+
+    # ======================================================
+    # Load
+    # ======================================================
+
+    def load(
+        self,
+        path: Optional[str] = None,
+    ) -> None:
+        """
+        Load configuration.
+
+        Collection data remains inside Qdrant.
+        """
+
+        load_dir = Path(path or "./qdrant_backup")
+
+        with open(
+
+            load_dir / "config.json",
+
+        ) as file:
+
+            config = json.load(file)
+
+        self.collection_name = config["collection"]
+
+        logger.info(
+
+            "Configuration loaded."
+
+        )
+
+    # ======================================================
+    # Flush
+    # ======================================================
+
+    def flush(
+        self,
+    ) -> None:
+        """
+        Qdrant automatically persists data.
+        """
+
+        logger.info(
+
+            "Flush completed."
+
+        )
+
+    # ======================================================
+    # Snapshot
+    # ======================================================
+
+    def create_snapshot(
+        self,
+    ) -> str:
+        """
+        Create Qdrant snapshot.
+        """
+
+        snapshot = self.client.create_snapshot(
+
+            self.collection_name
+
+        )
+
+        logger.info(
+
+            "Snapshot created."
+
+        )
+
+        return snapshot.name
+
+    # ======================================================
+    # List Snapshots
+    # ======================================================
+
+    def list_snapshots(
+        self,
+    ) -> List[str]:
+
+        snapshots = self.client.list_snapshots(
+
+            self.collection_name
+
+        )
+
+        return [
+
+            snapshot.name
+
+            for snapshot in snapshots
+
+        ]
+
+    # ======================================================
+    # Restore Snapshot
+    # ======================================================
+
+    def restore_snapshot(
+        self,
+        snapshot_name: str,
+    ) -> None:
+        """
+        Restore collection snapshot.
+        """
+
+        self.client.recover_snapshot(
+
+            collection_name=self.collection_name,
+
+            location=snapshot_name,
+
+        )
+
+        logger.info(
+
+            "Snapshot restored."
+
+        )
+
+    # ======================================================
+    # Backup
+    # ======================================================
+
+    def backup(
+        self,
+        destination: str,
+    ) -> None:
+        """
+        Save configuration + snapshot.
+        """
+
+        destination = Path(destination)
+
+        destination.mkdir(
+
+            parents=True,
+
+            exist_ok=True,
+
+        )
+
+        self.save(
+
+            str(destination)
+
+        )
+
+        snapshot = self.create_snapshot()
+
+        with open(
+
+            destination / "snapshot.txt",
+
+            "w",
+
+        ) as file:
+
+            file.write(snapshot)
+
+        logger.info(
+
+            "Backup created."
+
+        )
+
+    # ======================================================
+    # Restore
+    # ======================================================
+
+    def restore(
+        self,
+        source: str,
+    ) -> None:
+        """
+        Restore configuration and snapshot.
+        """
+
+        source = Path(source)
+
+        self.load(
+
+            str(source)
+
+        )
+
+        snapshot = (
+
+            source /
+
+            "snapshot.txt"
+
+        )
+
+        if snapshot.exists():
+
+            with open(snapshot) as file:
+
+                name = file.read().strip()
+
+            self.restore_snapshot(
+
+                name
+
+            )
+
+        logger.info(
+
+            "Restore completed."
+
+        )
+
+    # ======================================================
+    # Optimize
+    # ======================================================
+
+    def optimize(
+        self,
+    ) -> None:
+        """
+        Trigger optimizer.
+        """
+
+        self.client.update_collection(
+
+            collection_name=self.collection_name,
+
+            optimizer_config=OptimizersConfigDiff(
+
+                indexing_threshold=10000,
+
+            ),
+
+        )
+
+        logger.info(
+
+            "Optimization triggered."
+
+        )
+
+    # ======================================================
+    # Validate
+    # ======================================================
+
+    def validate(
+        self,
+    ) -> bool:
+
+        try:
+
+            info = self.client.get_collection(
+
+                self.collection_name
+
+            )
+
+            return (
+
+                info.config.params.vectors.size
+
+                ==
+
+                self.config.vector_size
+
+            )
+
+        except Exception:
+
+            return False
+
+    # ======================================================
+    # Index Information
+    # ======================================================
+
+    def index_information(
+        self,
+    ) -> Dict[str, Any]:
+
+        info = self.client.get_collection(
+
+            self.collection_name
+
+        )
+
+        return {
+
+            "backend": "Qdrant",
+
+            "collection": self.collection_name,
+
+            "points": info.points_count,
+
+            "segments": info.segments_count,
+
+            "distance": self.config.distance,
+
+            "vector_size": self.config.vector_size,
+
+            "replication": self.config.replication_factor,
+
+            "shards": self.config.shard_number,
+
+        }
+
+    # ======================================================
+    # Reset
+    # ======================================================
+
+    def reset(
+        self,
+    ) -> None:
+        """
+        Delete every point while
+        preserving collection.
+        """
+
+        self.clear()
+
+        logger.info(
+
+            "Collection reset."
+
+        )
