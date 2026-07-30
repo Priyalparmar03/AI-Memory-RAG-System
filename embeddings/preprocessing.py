@@ -1,12 +1,16 @@
 from __future__ import annotations
-
+import string
+import unicodedata
+from langdetect import detect, LangDetectException
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
 import html
 import logging
 import re
 import unicodedata
 from dataclasses import dataclass
 from typing import List
-
+from unidecode import unidecode
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +52,12 @@ class TextPreprocessor:
         self,
         config: PreprocessingConfig | None = None,
     ) -> None:
-
+        self.stemmer = PorterStemmer()
+        self.lemmatizer = WordNetLemmatizer()
+        self._stopwords = {
+            lang: set(stopwords.words(lang))
+            for lang in stopwords.fileids()
+        }
         self.config = config or PreprocessingConfig()
 
     # ------------------------------------------------------
@@ -681,3 +690,172 @@ class TextPreprocessor:
             output.append(line)
 
         return "\n".join(output)
+
+    # ------------------------------------------------------
+    # Detect Language
+    # ------------------------------------------------------
+
+    def detect_language(
+        self,
+        text: str,
+    ) -> str:
+
+        try:
+
+            return detect(text)
+
+        except LangDetectException:
+
+            return "unknown"
+
+    # ------------------------------------------------------
+    # Stopword Removal
+    # ------------------------------------------------------
+
+    def remove_stopwords(
+        self,
+        text: str,
+        language: str = "english",
+    ) -> str:
+
+        words = text.split()
+
+        stops = self._stopwords.get(
+            language,
+            set(),
+        )
+
+        return " ".join(
+
+            word
+
+            for word in words
+
+            if word.lower() not in stops
+
+        )
+
+    # ------------------------------------------------------
+    # Lemmatize
+    # ------------------------------------------------------
+
+    def lemmatize(
+        self,
+        text: str,
+    ) -> str:
+
+        return " ".join(
+
+            self.lemmatizer.lemmatize(word)
+
+            for word in text.split()
+
+        )
+
+    # ------------------------------------------------------
+    # Stem
+    # ------------------------------------------------------
+
+    def stem(
+        self,
+        text: str,
+    ) -> str:
+
+        return " ".join(
+
+            self.stemmer.stem(word)
+
+            for word in text.split()
+
+        )
+
+    # ------------------------------------------------------
+    # Transliterate
+    # ------------------------------------------------------
+
+    def transliterate(
+        self,
+        text: str,
+    ) -> str:
+
+        return unidecode(text)
+
+    # ------------------------------------------------------
+    # Remove Accents
+    # ------------------------------------------------------
+
+    def remove_accents(
+        self,
+        text: str,
+    ) -> str:
+
+        text = unicodedata.normalize(
+            "NFKD",
+            text,
+        )
+
+        return "".join(
+
+            c
+
+            for c in text
+
+            if not unicodedata.combining(c)
+
+        )
+
+    # ------------------------------------------------------
+    # Remove Emojis
+    # ------------------------------------------------------
+
+    def remove_emojis(
+        self,
+        text: str,
+    ) -> str:
+
+        emoji_pattern = re.compile(
+
+            "["
+            "\U0001F600-\U0001F64F"
+            "\U0001F300-\U0001F5FF"
+            "\U0001F680-\U0001F6FF"
+            "\U0001F1E0-\U0001F1FF"
+            "]+",
+
+            flags=re.UNICODE,
+
+        )
+
+        return emoji_pattern.sub(
+            "",
+            text,
+        )
+
+    # ------------------------------------------------------
+    # Replace Emojis
+    # ------------------------------------------------------
+
+    def replace_emojis(
+        self,
+        text: str,
+        replacement: str = "<EMOJI>",
+    ) -> str:
+
+        emoji_pattern = re.compile(
+
+            "["
+            "\U0001F600-\U0001F64F"
+            "\U0001F300-\U0001F5FF"
+            "\U0001F680-\U0001F6FF"
+            "\U0001F1E0-\U0001F1FF"
+            "]+",
+
+            flags=re.UNICODE,
+
+        )
+
+        return emoji_pattern.sub(
+            replacement,
+            text,
+        )
+
