@@ -457,3 +457,227 @@ class TextPreprocessor:
             text = text.replace(old, new)
 
         return text
+
+    # ------------------------------------------------------
+    # Remove Page Numbers
+    # ------------------------------------------------------
+
+    def remove_page_numbers(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Remove standalone page numbers.
+        """
+
+        return re.sub(
+            r"(?m)^\s*(page\s*)?\d+\s*$",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    # ------------------------------------------------------
+    # Remove Headers & Footers
+    # ------------------------------------------------------
+
+    def remove_headers_footers(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Remove repeated headers and footers.
+        """
+
+        lines = text.splitlines()
+
+        if len(lines) < 6:
+            return text
+
+        counts = {}
+
+        for line in lines:
+            line = line.strip()
+
+            if not line:
+                continue
+
+            counts[line] = counts.get(line, 0) + 1
+
+        repeated = {
+
+            line
+
+            for line, count in counts.items()
+
+            if count >= 3
+
+        }
+
+        cleaned = [
+
+            line
+
+            for line in lines
+
+            if line.strip() not in repeated
+
+        ]
+
+        return "\n".join(cleaned)
+
+    # ------------------------------------------------------
+    # Fix Hyphenation
+    # ------------------------------------------------------
+
+    def fix_hyphenation(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Join words broken across lines.
+        """
+
+        return re.sub(
+
+            r"(\w)-\n(\w)",
+
+            r"\1\2",
+
+            text,
+
+        )
+
+    # ------------------------------------------------------
+    # Merge Broken Paragraphs
+    # ------------------------------------------------------
+
+    def merge_paragraphs(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Merge wrapped lines into paragraphs.
+        """
+
+        text = re.sub(
+
+            r"(?<!\n)\n(?!\n)",
+
+            " ",
+
+            text,
+
+        )
+
+        return text
+
+    # ------------------------------------------------------
+    # Remove Watermarks
+    # ------------------------------------------------------
+
+    def remove_watermarks(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Remove common watermark patterns.
+        """
+
+        patterns = [
+
+            r"CONFIDENTIAL",
+
+            r"DRAFT",
+
+            r"COPY",
+
+            r"SAMPLE",
+
+            r"DO NOT DISTRIBUTE",
+
+        ]
+
+        for pattern in patterns:
+
+            text = re.sub(
+
+                pattern,
+
+                "",
+
+                text,
+
+                flags=re.IGNORECASE,
+
+            )
+
+        return text
+
+    # ------------------------------------------------------
+    # Remove Table Artifacts
+    # ------------------------------------------------------
+
+    def remove_table_artifacts(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Remove repeated table separators.
+        """
+
+        text = re.sub(
+
+            r"[-=]{3,}",
+
+            " ",
+
+            text,
+
+        )
+
+        text = re.sub(
+
+            r"\|{2,}",
+
+            "|",
+
+            text,
+
+        )
+
+        return text
+
+    # ------------------------------------------------------
+    # Remove Duplicate Lines
+    # ------------------------------------------------------
+
+    def remove_duplicate_lines(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Remove duplicated OCR lines.
+        """
+
+        seen = set()
+
+        output = []
+
+        for line in text.splitlines():
+
+            clean = line.strip()
+
+            if not clean:
+
+                continue
+
+            if clean in seen:
+
+                continue
+
+            seen.add(clean)
+
+            output.append(line)
+
+        return "\n".join(output)
