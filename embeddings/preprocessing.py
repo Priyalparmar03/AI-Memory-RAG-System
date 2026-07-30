@@ -238,3 +238,222 @@ class TextPreprocessor:
             text = self.lowercase(text)
 
         return self.strip(text)
+
+
+    # ------------------------------------------------------
+    # URL Normalization
+    # ------------------------------------------------------
+
+    def normalize_urls(
+        self,
+        text: str,
+        replacement: str = "<URL>",
+    ) -> str:
+
+        pattern = r"https?://\S+|www\.\S+"
+
+        return re.sub(
+            pattern,
+            replacement,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    # ------------------------------------------------------
+    # Email Normalization
+    # ------------------------------------------------------
+
+    def normalize_emails(
+        self,
+        text: str,
+        replacement: str = "<EMAIL>",
+    ) -> str:
+
+        pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
+
+        return re.sub(
+            pattern,
+            replacement,
+            text,
+        )
+
+    # ------------------------------------------------------
+    # Phone Number Normalization
+    # ------------------------------------------------------
+
+    def normalize_phone_numbers(
+        self,
+        text: str,
+        replacement: str = "<PHONE>",
+    ) -> str:
+
+        pattern = (
+            r"\+?\d{1,3}[-.\s]?"
+            r"\(?\d{2,4}\)?[-.\s]?"
+            r"\d{3,4}[-.\s]?\d{3,4}"
+        )
+
+        return re.sub(
+            pattern,
+            replacement,
+            text,
+        )
+
+    # ------------------------------------------------------
+    # Number Normalization
+    # ------------------------------------------------------
+
+    def normalize_numbers(
+        self,
+        text: str,
+        replacement: str = "<NUMBER>",
+    ) -> str:
+
+        return re.sub(
+            r"\b\d+(\.\d+)?\b",
+            replacement,
+            text,
+        )
+
+    # ------------------------------------------------------
+    # Quote Normalization
+    # ------------------------------------------------------
+
+    def normalize_quotes(
+        self,
+        text: str,
+    ) -> str:
+
+        replacements = {
+
+            "\u2018": "'",
+
+            "\u2019": "'",
+
+            "\u201C": '"',
+
+            "\u201D": '"',
+
+        }
+
+        for old, new in replacements.items():
+
+            text = text.replace(old, new)
+
+        return text
+
+    # ------------------------------------------------------
+    # Dash Normalization
+    # ------------------------------------------------------
+
+    def normalize_dashes(
+        self,
+        text: str,
+    ) -> str:
+
+        replacements = {
+
+            "\u2013": "-",
+
+            "\u2014": "-",
+
+            "\u2212": "-",
+
+        }
+
+        for old, new in replacements.items():
+
+            text = text.replace(old, new)
+
+        return text
+
+    # ------------------------------------------------------
+    # Remove Zero Width Characters
+    # ------------------------------------------------------
+
+    def remove_zero_width(
+        self,
+        text: str,
+    ) -> str:
+
+        return re.sub(
+
+            r"[\u200B-\u200D\uFEFF]",
+
+            "",
+
+            text,
+
+        )
+
+    # ------------------------------------------------------
+    # Remove Extra Punctuation
+    # ------------------------------------------------------
+
+    def normalize_punctuation(
+        self,
+        text: str,
+    ) -> str:
+
+        text = re.sub(
+
+            r"[!?]{2,}",
+
+            "!",
+
+            text,
+
+        )
+
+        text = re.sub(
+
+            r"\.{3,}",
+
+            "...",
+
+            text,
+
+        )
+
+        text = re.sub(
+
+            r",{2,}",
+
+            ",",
+
+            text,
+
+        )
+
+        return text
+
+    # ------------------------------------------------------
+    # Symbol Normalization
+    # ------------------------------------------------------
+
+    def normalize_symbols(
+        self,
+        text: str,
+    ) -> str:
+
+        replacements = {
+
+            "•": "-",
+
+            "●": "-",
+
+            "▪": "-",
+
+            "■": "-",
+
+            "→": "->",
+
+            "⇒": "=>",
+
+        }
+
+        for old, new in replacements.items():
+
+            text = text.replace(old, new)
+
+        return text
