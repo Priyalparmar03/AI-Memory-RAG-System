@@ -588,3 +588,373 @@ def batch_statistics(
         "max_tokens": max(counts),
 
     }
+
+# ==========================================================
+# Truncate
+# ==========================================================
+
+def truncate(
+    self,
+    text: str,
+    max_tokens: int | None = None,
+) -> str:
+    """
+    Truncate text to maximum token limit.
+    """
+
+    limit = max_tokens or self.config.max_tokens
+
+    if self.config.backend == "whitespace":
+
+        words = text.split()
+
+        return " ".join(words[:limit])
+
+    token_ids = self.encode(text)
+
+    token_ids = token_ids[:limit]
+
+    return self.decode(token_ids)
+
+
+# ==========================================================
+# Batch Truncate
+# ==========================================================
+
+def truncate_batch(
+    self,
+    texts: List[str],
+    max_tokens: int | None = None,
+) -> List[str]:
+
+    return [
+
+        self.truncate(
+
+            text,
+
+            max_tokens,
+
+        )
+
+        for text in texts
+
+    ]
+
+
+# ==========================================================
+# Sliding Window
+# ==========================================================
+
+def sliding_window(
+    self,
+    text: str,
+    window_size: int = 512,
+    stride: int = 256,
+) -> List[str]:
+    """
+    Create overlapping windows.
+    """
+
+    token_ids = self.encode(text)
+
+    windows = []
+
+    start = 0
+
+    while start < len(token_ids):
+
+        chunk = token_ids[
+
+            start:
+
+            start + window_size
+
+        ]
+
+        if not chunk:
+
+            break
+
+        windows.append(
+
+            self.decode(chunk)
+
+        )
+
+        start += stride
+
+    return windows
+
+
+# ==========================================================
+# Batch Sliding Window
+# ==========================================================
+
+def sliding_window_batch(
+    self,
+    texts: List[str],
+    window_size: int = 512,
+    stride: int = 256,
+) -> List[List[str]]:
+
+    return [
+
+        self.sliding_window(
+
+            text,
+
+            window_size,
+
+            stride,
+
+        )
+
+        for text in texts
+
+    ]
+
+
+# ==========================================================
+# Overlap Chunks
+# ==========================================================
+
+def overlap_chunks(
+    self,
+    chunks: List[str],
+    overlap: int = 50,
+) -> List[str]:
+    """
+    Add overlap between chunks.
+    """
+
+    if len(chunks) <= 1:
+
+        return chunks
+
+    output = [
+
+        chunks[0]
+
+    ]
+
+    for i in range(
+
+        1,
+
+        len(chunks),
+
+    ):
+
+        previous = self.encode(
+
+            chunks[i - 1]
+
+        )
+
+        current = self.encode(
+
+            chunks[i]
+
+        )
+
+        overlap_tokens = previous[-overlap:]
+
+        merged = overlap_tokens + current
+
+        output.append(
+
+            self.decode(
+
+                merged
+
+            )
+
+        )
+
+    return output
+
+
+# ==========================================================
+# Context Validation
+# ==========================================================
+
+def validate_context(
+    self,
+    text: str,
+) -> dict:
+    """
+    Validate context length.
+    """
+
+    used = self.count_tokens(text)
+
+    remaining = max(
+
+        0,
+
+        self.config.max_tokens - used,
+
+    )
+
+    return {
+
+        "valid": used <= self.config.max_tokens,
+
+        "used_tokens": used,
+
+        "remaining_tokens": remaining,
+
+        "max_tokens": self.config.max_tokens,
+
+    }
+
+
+# ==========================================================
+# Check Limits
+# ==========================================================
+
+def check_limits(
+    self,
+    texts: List[str],
+) -> List[dict]:
+
+    return [
+
+        self.validate_context(
+
+            text
+
+        )
+
+        for text in texts
+
+    ]
+
+
+# ==========================================================
+# Split By Token Count
+# ==========================================================
+
+def split_by_tokens(
+    self,
+    text: str,
+    max_tokens: int,
+) -> List[str]:
+    """
+    Split text into token-sized chunks.
+    """
+
+    token_ids = self.encode(text)
+
+    chunks = []
+
+    for i in range(
+
+        0,
+
+        len(token_ids),
+
+        max_tokens,
+
+    ):
+
+        chunk = token_ids[
+
+            i:i + max_tokens
+
+        ]
+
+        chunks.append(
+
+            self.decode(chunk)
+
+        )
+
+    return chunks
+
+
+# ==========================================================
+# Split With Overlap
+# ==========================================================
+
+def split_with_overlap(
+    self,
+    text: str,
+    max_tokens: int,
+    overlap: int,
+) -> List[str]:
+    """
+    Token-aware splitting with overlap.
+    """
+
+    token_ids = self.encode(text)
+
+    chunks = []
+
+    step = max_tokens - overlap
+
+    for i in range(
+
+        0,
+
+        len(token_ids),
+
+        step,
+
+    ):
+
+        chunk = token_ids[
+
+            i:i + max_tokens
+
+        ]
+
+        if chunk:
+
+            chunks.append(
+
+                self.decode(chunk)
+
+            )
+
+    return chunks
+
+
+# ==========================================================
+# Long Document
+# ==========================================================
+
+def prepare_document(
+    self,
+    text: str,
+    max_tokens: int | None = None,
+    overlap: int = 50,
+) -> List[str]:
+    """
+    Prepare long document for embedding.
+    """
+
+    max_tokens = (
+
+        max_tokens
+
+        or
+
+        self.config.max_tokens
+
+    )
+
+    if self.count_tokens(text) <= max_tokens:
+
+        return [text]
+
+    return self.split_with_overlap(
+
+        text,
+
+        max_tokens,
+
+        overlap,
+
+    )
