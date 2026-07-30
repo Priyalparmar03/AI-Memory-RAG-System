@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+import time
+import statistics
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
@@ -958,3 +959,304 @@ def prepare_document(
         overlap,
 
     )
+
+    # ======================================================
+    # Runtime Statistics
+    # ======================================================
+
+    def runtime_statistics(
+        self,
+    ) -> dict:
+        """
+        Runtime tokenizer information.
+        """
+
+        return {
+
+            "model": self.config.model_name,
+
+            "backend": self.config.backend,
+
+            "vocabulary_size": self.vocabulary_size(),
+
+            "max_context": self.config.max_tokens,
+
+            "padding": self.config.padding,
+
+            "truncation": self.config.truncation,
+
+            "special_tokens": len(
+                self.special_tokens()
+            ),
+
+        }
+
+    # ======================================================
+    # Token Statistics
+    # ======================================================
+
+    def token_statistics(
+        self,
+        texts: List[str],
+    ) -> dict:
+        """
+        Statistics of token counts.
+        """
+
+        counts = self.count_batch(texts)
+
+        if not counts:
+
+            return {
+
+                "documents": 0,
+
+                "total_tokens": 0,
+
+            }
+
+        return {
+
+            "documents": len(texts),
+
+            "total_tokens": sum(counts),
+
+            "minimum": min(counts),
+
+            "maximum": max(counts),
+
+            "average": round(
+
+                statistics.mean(counts),
+
+                2,
+
+            ),
+
+            "median": round(
+
+                statistics.median(counts),
+
+                2,
+
+            ),
+
+        }
+
+    # ======================================================
+    # Diagnostics
+    # ======================================================
+
+    def diagnostics(
+        self,
+    ) -> dict:
+        """
+        Tokenizer diagnostics.
+        """
+
+        return {
+
+            "backend": self.config.backend,
+
+            "model": self.config.model_name,
+
+            "loaded": self.tokenizer is not None,
+
+            "max_tokens": self.config.max_tokens,
+
+            "vocabulary": self.vocabulary_size(),
+
+            "special_tokens": self.special_tokens(),
+
+        }
+
+    # ======================================================
+    # Benchmark
+    # ======================================================
+
+    def benchmark(
+        self,
+        text: str,
+        iterations: int = 100,
+    ) -> dict:
+        """
+        Benchmark tokenizer performance.
+        """
+
+        encode_times = []
+
+        decode_times = []
+
+        token_ids = self.encode(text)
+
+        for _ in range(iterations):
+
+            start = time.perf_counter()
+
+            self.encode(text)
+
+            encode_times.append(
+
+                time.perf_counter() - start
+
+            )
+
+            start = time.perf_counter()
+
+            self.decode(token_ids)
+
+            decode_times.append(
+
+                time.perf_counter() - start
+
+            )
+
+        return {
+
+            "iterations": iterations,
+
+            "encode_ms": round(
+
+                statistics.mean(
+
+                    encode_times
+
+                ) * 1000,
+
+                3,
+
+            ),
+
+            "decode_ms": round(
+
+                statistics.mean(
+
+                    decode_times
+
+                ) * 1000,
+
+                3,
+
+            ),
+
+        }
+
+    # ======================================================
+    # Validate
+    # ======================================================
+
+    def validate(
+        self,
+    ) -> bool:
+        """
+        Validate tokenizer.
+        """
+
+        try:
+
+            sample = "Tokenizer validation."
+
+            ids = self.encode(sample)
+
+            text = self.decode(ids)
+
+            return isinstance(
+
+                text,
+
+                str,
+
+            )
+
+        except Exception:
+
+            return False
+
+    # ======================================================
+    # Health
+    # ======================================================
+
+    def health(
+        self,
+    ) -> dict:
+        """
+        Health status.
+        """
+
+        return {
+
+            "status": (
+
+                "healthy"
+
+                if self.validate()
+
+                else "failed"
+
+            ),
+
+            "backend": self.config.backend,
+
+            "model": self.config.model_name,
+
+        }
+
+    # ======================================================
+    # Cleanup
+    # ======================================================
+
+    def cleanup(
+        self,
+    ) -> None:
+        """
+        Release tokenizer resources.
+        """
+
+        logger.info(
+
+            "Tokenizer cleanup completed."
+
+        )
+
+    # ======================================================
+    # Context Manager
+    # ======================================================
+
+    def __enter__(self):
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
+
+        self.cleanup()
+
+    # ======================================================
+    # Python Protocols
+    # ======================================================
+
+    def __len__(self):
+
+        return self.vocabulary_size()
+
+    def __repr__(self):
+
+        return (
+
+            "TextTokenizer("
+
+            f"model='{self.config.model_name}', "
+
+            f"backend='{self.config.backend}', "
+
+            f"max_tokens={self.config.max_tokens}, "
+
+            f"vocab={self.vocabulary_size()}"
+
+            ")"
+
+        )
