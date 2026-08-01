@@ -639,3 +639,344 @@ def evidence_mapping(
         ] = result["evidence"]
 
     return mapping
+
+# ======================================================
+# Faithfulness Score
+# ======================================================
+
+def faithfulness_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Percentage of supported claims.
+    """
+
+    verified = self.verify_all_claims(
+        answer,
+        context,
+    )
+
+    if not verified:
+        return 0.0
+
+    supported = sum(
+        1
+        for claim in verified
+        if claim["supported"]
+    )
+
+    return round(
+        supported / len(verified),
+        4,
+    )
+
+
+# ======================================================
+# Groundedness Score
+# ======================================================
+
+def groundedness_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Average semantic overlap between
+    answer claims and retrieved evidence.
+    """
+
+    verified = self.verify_all_claims(
+        answer,
+        context,
+    )
+
+    if not verified:
+        return 0.0
+
+    return round(
+        sum(
+            claim["score"]
+            for claim in verified
+        ) / len(verified),
+        4,
+    )
+
+
+# ======================================================
+# Evidence Score
+# ======================================================
+
+def evidence_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Measure evidence utilization.
+    """
+
+    evidence = self.evidence_sentences(
+        answer,
+        context,
+    )
+
+    context_sentences = self.context_sentences(
+        context
+    )
+
+    if not context_sentences:
+        return 0.0
+
+    return round(
+        len(set(evidence))
+        /
+        len(context_sentences),
+        4,
+    )
+
+
+# ======================================================
+# Completeness Score
+# ======================================================
+
+def completeness_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Approximate completeness using
+    lexical coverage.
+    """
+
+    answer_words = set(
+        self.normalize_context(answer).split()
+    )
+
+    context_words = set(
+        self.normalize_context(
+            " ".join(context)
+        ).split()
+    )
+
+    if not context_words:
+        return 0.0
+
+    return round(
+        len(
+            answer_words & context_words
+        )
+        /
+        len(context_words),
+        4,
+    )
+
+
+# ======================================================
+# Overall Evaluation
+# ======================================================
+
+def evaluate(
+    self,
+    answer: str,
+    context: List[str],
+) -> FaithfulnessResult:
+    """
+    Complete faithfulness evaluation.
+    """
+
+    verified = self.verify_all_claims(
+        answer,
+        context,
+    )
+
+    supported = sum(
+        1
+        for claim in verified
+        if claim["supported"]
+    )
+
+    unsupported = (
+        len(verified)
+        - supported
+    )
+
+    faithfulness = self.faithfulness_score(
+        answer,
+        context,
+    )
+
+    groundedness = self.groundedness_score(
+        answer,
+        context,
+    )
+
+    evidence = self.evidence_score(
+        answer,
+        context,
+    )
+
+    result = FaithfulnessResult(
+
+        score=faithfulness,
+
+        groundedness=groundedness,
+
+        evidence_score=evidence,
+
+        supported_claims=supported,
+
+        unsupported_claims=unsupported,
+
+        total_claims=len(verified),
+
+        metadata={
+
+            "claim_details": verified,
+
+            "citation_coverage":
+                self.citation_coverage(
+                    answer,
+                    context,
+                ),
+
+            "unsupported_ratio":
+                self.unsupported_ratio(
+                    answer,
+                    context,
+                ),
+
+            "completeness":
+                self.completeness_score(
+                    answer,
+                    context,
+                ),
+
+        },
+
+    )
+
+    self.history.append(result)
+
+    return result
+
+
+# ======================================================
+# Batch Evaluation
+# ======================================================
+
+def batch_evaluate(
+    self,
+    answers: List[str],
+    contexts: List[List[str]],
+) -> List[FaithfulnessResult]:
+    """
+    Evaluate multiple answers.
+    """
+
+    if len(answers) != len(contexts):
+
+        raise FaithfulnessError(
+
+            "Answers and contexts must "
+
+            "have the same length."
+
+        )
+
+    results = []
+
+    for answer, context in zip(
+        answers,
+        contexts,
+    ):
+
+        results.append(
+
+            self.evaluate(
+                answer,
+                context,
+            )
+
+        )
+
+    return results
+
+
+# ======================================================
+# Average Score
+# ======================================================
+
+def average_score(
+    self,
+) -> float:
+    """
+    Average faithfulness score.
+    """
+
+    if not self.history:
+
+        return 0.0
+
+    return round(
+
+        sum(
+            r.score
+            for r in self.history
+        )
+        /
+        len(self.history),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Best Result
+# ======================================================
+
+def best_result(
+    self,
+) -> Optional[FaithfulnessResult]:
+    """
+    Best evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return max(
+
+        self.history,
+
+        key=lambda r: r.score,
+
+    )
+
+
+# ======================================================
+# Worst Result
+# ======================================================
+
+def worst_result(
+    self,
+) -> Optional[FaithfulnessResult]:
+    """
+    Worst evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return min(
+
+        self.history,
+
+        key=lambda r: r.score,
+
+    )
