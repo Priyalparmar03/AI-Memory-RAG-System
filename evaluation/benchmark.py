@@ -676,3 +676,301 @@ def success_rate(
         4,
 
     )
+
+# ======================================================
+# Compare Models
+# ======================================================
+
+def compare_models(
+    self,
+    models: Dict[str, Any],
+    dataset: BenchmarkDataset,
+    retriever,
+    relevance_evaluator=None,
+    faithfulness_evaluator=None,
+    hallucination_evaluator=None,
+) -> Dict[str, BenchmarkStatistics]:
+    """
+    Compare multiple LLM models.
+    """
+
+    comparison = {}
+
+    for model_name, generator in models.items():
+
+        logger.info(
+            "Benchmarking model: %s",
+            model_name,
+        )
+
+        self.results.clear()
+
+        stats = self.benchmark_dataset(
+
+            dataset=dataset,
+
+            retriever=retriever,
+
+            generator=generator,
+
+            relevance_evaluator=relevance_evaluator,
+
+            faithfulness_evaluator=faithfulness_evaluator,
+
+            hallucination_evaluator=hallucination_evaluator,
+
+        )
+
+        comparison[model_name] = stats
+
+    return comparison
+
+
+# ======================================================
+# Compare Embedding Models
+# ======================================================
+
+def compare_embeddings(
+    self,
+    embedding_models: Dict[str, Any],
+    dataset: BenchmarkDataset,
+    retriever_factory,
+    generator=None,
+    relevance_evaluator=None,
+    faithfulness_evaluator=None,
+    hallucination_evaluator=None,
+) -> Dict[str, BenchmarkStatistics]:
+    """
+    Compare embedding models.
+    """
+
+    comparison = {}
+
+    for name, embedding_model in embedding_models.items():
+
+        logger.info(
+            "Embedding: %s",
+            name,
+        )
+
+        retriever = retriever_factory(
+            embedding_model
+        )
+
+        self.results.clear()
+
+        stats = self.benchmark_dataset(
+
+            dataset=dataset,
+
+            retriever=retriever,
+
+            generator=generator,
+
+            relevance_evaluator=relevance_evaluator,
+
+            faithfulness_evaluator=faithfulness_evaluator,
+
+            hallucination_evaluator=hallucination_evaluator,
+
+        )
+
+        comparison[name] = stats
+
+    return comparison
+
+
+# ======================================================
+# Compare Vector Stores
+# ======================================================
+
+def compare_vectorstores(
+    self,
+    vectorstores: Dict[str, Any],
+    dataset: BenchmarkDataset,
+    generator=None,
+    relevance_evaluator=None,
+    faithfulness_evaluator=None,
+    hallucination_evaluator=None,
+) -> Dict[str, BenchmarkStatistics]:
+    """
+    Compare vector databases.
+    """
+
+    comparison = {}
+
+    for backend, retriever in vectorstores.items():
+
+        logger.info(
+            "VectorStore: %s",
+            backend,
+        )
+
+        self.results.clear()
+
+        stats = self.benchmark_dataset(
+
+            dataset=dataset,
+
+            retriever=retriever,
+
+            generator=generator,
+
+            relevance_evaluator=relevance_evaluator,
+
+            faithfulness_evaluator=faithfulness_evaluator,
+
+            hallucination_evaluator=hallucination_evaluator,
+
+        )
+
+        comparison[backend] = stats
+
+    return comparison
+
+
+# ======================================================
+# Compare Retrievers
+# ======================================================
+
+def compare_retrievers(
+    self,
+    retrievers: Dict[str, Any],
+    dataset: BenchmarkDataset,
+    generator=None,
+    relevance_evaluator=None,
+    faithfulness_evaluator=None,
+    hallucination_evaluator=None,
+) -> Dict[str, BenchmarkStatistics]:
+    """
+    Compare retrieval algorithms.
+    """
+
+    comparison = {}
+
+    for name, retriever in retrievers.items():
+
+        logger.info(
+            "Retriever: %s",
+            name,
+        )
+
+        self.results.clear()
+
+        stats = self.benchmark_dataset(
+
+            dataset,
+
+            retriever,
+
+            generator,
+
+            relevance_evaluator,
+
+            faithfulness_evaluator,
+
+            hallucination_evaluator,
+
+        )
+
+        comparison[name] = stats
+
+    return comparison
+
+
+# ======================================================
+# Ranking
+# ======================================================
+
+def ranking(
+    self,
+    comparison: Dict[str, BenchmarkStatistics],
+) -> List[tuple]:
+    """
+    Rank systems by average score.
+    """
+
+    ranked = sorted(
+
+        comparison.items(),
+
+        key=lambda x: x[1].average_score,
+
+        reverse=True,
+
+    )
+
+    return ranked
+
+
+# ======================================================
+# Best System
+# ======================================================
+
+def best_system(
+    self,
+    comparison: Dict[str, BenchmarkStatistics],
+) -> tuple:
+    """
+    Return best performing system.
+    """
+
+    ranking = self.ranking(
+        comparison
+    )
+
+    return ranking[0]
+
+
+# ======================================================
+# Worst System
+# ======================================================
+
+def worst_system(
+    self,
+    comparison: Dict[str, BenchmarkStatistics],
+) -> tuple:
+    """
+    Return worst performing system.
+    """
+
+    ranking = self.ranking(
+        comparison
+    )
+
+    return ranking[-1]
+
+
+# ======================================================
+# Comparison Summary
+# ======================================================
+
+def comparison_summary(
+    self,
+    comparison: Dict[str, BenchmarkStatistics],
+) -> List[Dict]:
+    """
+    Human-readable comparison.
+    """
+
+    summary = []
+
+    for name, stats in comparison.items():
+
+        summary.append(
+
+            {
+
+                "name": name,
+
+                "queries": stats.total_queries,
+
+                "average_score": stats.average_score,
+
+                "average_latency": stats.average_latency,
+
+            }
+
+        )
+
+    return summary
