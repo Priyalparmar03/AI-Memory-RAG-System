@@ -974,3 +974,426 @@ def comparison_summary(
         )
 
     return summary
+
+# ======================================================
+# Generate Report
+# ======================================================
+
+def generate_report(
+    self,
+) -> Dict[str, Any]:
+    """
+    Generate benchmark report.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "summary": {
+
+            "queries": stats.total_queries,
+
+            "average_score": stats.average_score,
+
+            "average_latency": stats.average_latency,
+
+            "best_score": stats.maximum_score,
+
+            "worst_score": stats.minimum_score,
+
+        },
+
+        "results": [
+
+            {
+
+                "query": r.query,
+
+                "retrieval_score": r.retrieval_score,
+
+                "relevance_score": r.relevance_score,
+
+                "faithfulness_score": r.faithfulness_score,
+
+                "hallucination_score": r.hallucination_score,
+
+                "latency_ms": r.latency_ms,
+
+                "overall_score": r.overall_score,
+
+            }
+
+            for r in self.results
+
+        ],
+
+    }
+
+
+# ======================================================
+# Export JSON
+# ======================================================
+
+def export_json(
+    self,
+    path: str,
+) -> None:
+    """
+    Export report as JSON.
+    """
+
+    with open(
+
+        path,
+
+        "w",
+
+        encoding="utf8",
+
+    ) as file:
+
+        json.dump(
+
+            self.generate_report(),
+
+            file,
+
+            indent=4,
+
+        )
+
+    logger.info(
+
+        "JSON report exported: %s",
+
+        path,
+
+    )
+
+
+# ======================================================
+# Export CSV
+# ======================================================
+
+def export_csv(
+    self,
+    path: str,
+) -> None:
+    """
+    Export benchmark results as CSV.
+    """
+
+    with open(
+
+        path,
+
+        "w",
+
+        newline="",
+
+        encoding="utf8",
+
+    ) as file:
+
+        writer = csv.writer(file)
+
+        writer.writerow(
+
+            [
+
+                "query",
+
+                "retrieval_score",
+
+                "relevance_score",
+
+                "faithfulness_score",
+
+                "hallucination_score",
+
+                "latency_ms",
+
+                "overall_score",
+
+            ]
+
+        )
+
+        for result in self.results:
+
+            writer.writerow(
+
+                [
+
+                    result.query,
+
+                    result.retrieval_score,
+
+                    result.relevance_score,
+
+                    result.faithfulness_score,
+
+                    result.hallucination_score,
+
+                    result.latency_ms,
+
+                    result.overall_score,
+
+                ]
+
+            )
+
+    logger.info(
+
+        "CSV report exported: %s",
+
+        path,
+
+    )
+
+
+# ======================================================
+# Save Reports
+# ======================================================
+
+def save_reports(
+    self,
+) -> None:
+    """
+    Automatically save reports.
+    """
+
+    if not self.config.save_reports:
+
+        return
+
+    directory = Path(
+
+        self.config.report_directory
+
+    )
+
+    directory.mkdir(
+
+        parents=True,
+
+        exist_ok=True,
+
+    )
+
+    if self.config.export_json:
+
+        self.export_json(
+
+            str(
+
+                directory /
+
+                "benchmark_report.json"
+
+            )
+
+        )
+
+    if self.config.export_csv:
+
+        self.export_csv(
+
+            str(
+
+                directory /
+
+                "benchmark_report.csv"
+
+            )
+
+        )
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark diagnostics.
+    """
+
+    return {
+
+        "configuration": self.config,
+
+        "statistics": self.statistics(),
+
+        "summary": self.benchmark_summary(),
+
+        "history_size": len(self.results),
+
+    }
+
+
+# ======================================================
+# Runtime Statistics
+# ======================================================
+
+def runtime_statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Runtime statistics.
+    """
+
+    if not self.results:
+
+        return {
+
+            "queries": 0,
+
+            "throughput_qps": 0,
+
+        }
+
+    total_time = sum(
+
+        r.latency_ms
+
+        for r in self.results
+
+    ) / 1000
+
+    throughput = (
+
+        len(self.results)
+
+        / total_time
+
+        if total_time > 0
+
+        else 0
+
+    )
+
+    return {
+
+        "queries": len(self.results),
+
+        "total_runtime_seconds": round(
+
+            total_time,
+
+            3,
+
+        ),
+
+        "throughput_qps": round(
+
+            throughput,
+
+            2,
+
+        ),
+
+    }
+
+
+# ======================================================
+# Benchmark History
+# ======================================================
+
+def history(
+    self,
+) -> List[BenchmarkResult]:
+    """
+    Return benchmark history.
+    """
+
+    return list(
+
+        self.results
+
+    )
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup benchmark runner.
+    """
+
+    self.results.clear()
+
+    logger.info(
+
+        "Benchmark runner cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(self):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.results
+
+    )
+
+
+def __iter__(
+    self,
+):
+
+    return iter(
+
+        self.results
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    return (
+
+        "BenchmarkRunner("
+
+        f"queries={len(self.results)}, "
+
+        f"average_score={self.statistics().average_score:.3f}"
+
+        ")"
+
+    )
