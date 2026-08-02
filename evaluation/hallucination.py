@@ -347,3 +347,531 @@ class HallucinationEvaluator:
             ),
 
         }
+
+# ======================================================
+# Detect Unsupported Claims
+# ======================================================
+
+def detect_unsupported_claims(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[Dict[str, Any]]:
+    """
+    Detect claims that are not supported
+    by retrieved context.
+    """
+
+    context_text = self.context_text(context)
+
+    unsupported = []
+
+    for claim in self.extract_claims(answer):
+
+        normalized = self.normalize(claim)
+
+        supported = normalized in context_text
+
+        if not supported:
+
+            unsupported.append(
+
+                {
+
+                    "claim": claim,
+
+                    "reason": "No supporting evidence",
+
+                }
+
+            )
+
+    return unsupported
+
+
+# ======================================================
+# Detect Entity Hallucination
+# ======================================================
+
+def detect_entity_hallucination(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[str]:
+    """
+    Detect entities present in the answer
+    but missing from the retrieved context.
+    """
+
+    answer_entities = set(
+
+        entity.lower()
+
+        for entity in self.extract_entities(answer)
+
+    )
+
+    context_entities = set(
+
+        entity.lower()
+
+        for entity in self.extract_entities(
+
+            self.context_text(context)
+
+        )
+
+    )
+
+    return sorted(
+
+        answer_entities - context_entities
+
+    )
+
+
+# ======================================================
+# Detect Numeric Hallucination
+# ======================================================
+
+def detect_numeric_hallucination(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[str]:
+    """
+    Detect numbers appearing only in the answer.
+    """
+
+    answer_numbers = set(
+
+        self.extract_numbers(answer)
+
+    )
+
+    context_numbers = set(
+
+        self.extract_numbers(
+
+            self.context_text(context)
+
+        )
+
+    )
+
+    return sorted(
+
+        answer_numbers - context_numbers
+
+    )
+
+
+# ======================================================
+# Detect Date Hallucination
+# ======================================================
+
+def detect_date_hallucination(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[str]:
+    """
+    Detect dates appearing only in the answer.
+    """
+
+    answer_dates = set(
+
+        date.lower()
+
+        for date in self.extract_dates(answer)
+
+    )
+
+    context_dates = set(
+
+        date.lower()
+
+        for date in self.extract_dates(
+
+            self.context_text(context)
+
+        )
+
+    )
+
+    return sorted(
+
+        answer_dates - context_dates
+
+    )
+
+
+# ======================================================
+# Detect Contradictions
+# ======================================================
+
+def detect_contradictions(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[Dict[str, Any]]:
+    """
+    Very simple contradiction detection.
+    """
+
+    contradictions = []
+
+    context_text = self.context_text(context)
+
+    negative_words = {
+
+        "not",
+
+        "never",
+
+        "none",
+
+        "no",
+
+        "without",
+
+        "cannot",
+
+    }
+
+    for claim in self.extract_claims(answer):
+
+        normalized = self.normalize(claim)
+
+        if normalized not in context_text:
+
+            continue
+
+        claim_negative = any(
+
+            word in normalized.split()
+
+            for word in negative_words
+
+        )
+
+        context_negative = any(
+
+            word in context_text.split()
+
+            for word in negative_words
+
+        )
+
+        if claim_negative != context_negative:
+
+            contradictions.append(
+
+                {
+
+                    "claim": claim,
+
+                    "reason": "Possible contradiction",
+
+                }
+
+            )
+
+    return contradictions
+
+
+# ======================================================
+# Detect Missing Evidence
+# ======================================================
+
+def detect_missing_evidence(
+    self,
+    answer: str,
+    context: List[str],
+) -> List[str]:
+    """
+    Return claims without evidence.
+    """
+
+    unsupported = self.detect_unsupported_claims(
+
+        answer,
+
+        context,
+
+    )
+
+    return [
+
+        item["claim"]
+
+        for item in unsupported
+
+    ]
+
+
+# ======================================================
+# Entity Coverage
+# ======================================================
+
+def entity_coverage(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Percentage of answer entities supported
+    by the context.
+    """
+
+    answer_entities = set(
+
+        entity.lower()
+
+        for entity in self.extract_entities(answer)
+
+    )
+
+    if not answer_entities:
+
+        return 1.0
+
+    hallucinated = set(
+
+        self.detect_entity_hallucination(
+
+            answer,
+
+            context,
+
+        )
+
+    )
+
+    supported = (
+
+        len(answer_entities)
+
+        - len(hallucinated)
+
+    )
+
+    return round(
+
+        supported
+
+        /
+
+        len(answer_entities),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Numeric Coverage
+# ======================================================
+
+def numeric_coverage(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Percentage of answer numbers supported
+    by the context.
+    """
+
+    answer_numbers = set(
+
+        self.extract_numbers(answer)
+
+    )
+
+    if not answer_numbers:
+
+        return 1.0
+
+    hallucinated = set(
+
+        self.detect_numeric_hallucination(
+
+            answer,
+
+            context,
+
+        )
+
+    )
+
+    supported = (
+
+        len(answer_numbers)
+
+        - len(hallucinated)
+
+    )
+
+    return round(
+
+        supported
+
+        /
+
+        len(answer_numbers),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Date Coverage
+# ======================================================
+
+def date_coverage(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Percentage of answer dates supported
+    by the context.
+    """
+
+    answer_dates = set(
+
+        date.lower()
+
+        for date in self.extract_dates(answer)
+
+    )
+
+    if not answer_dates:
+
+        return 1.0
+
+    hallucinated = set(
+
+        self.detect_date_hallucination(
+
+            answer,
+
+            context,
+
+        )
+
+    )
+
+    supported = (
+
+        len(answer_dates)
+
+        - len(hallucinated)
+
+    )
+
+    return round(
+
+        supported
+
+        /
+
+        len(answer_dates),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Detection Summary
+# ======================================================
+
+def detection_summary(
+    self,
+    answer: str,
+    context: List[str],
+) -> Dict[str, Any]:
+    """
+    Overall hallucination summary.
+    """
+
+    unsupported = self.detect_unsupported_claims(
+
+        answer,
+
+        context,
+
+    )
+
+    entities = self.detect_entity_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    numbers = self.detect_numeric_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    dates = self.detect_date_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    contradictions = self.detect_contradictions(
+
+        answer,
+
+        context,
+
+    )
+
+    return {
+
+        "unsupported_claims": len(unsupported),
+
+        "entity_errors": len(entities),
+
+        "numeric_errors": len(numbers),
+
+        "date_errors": len(dates),
+
+        "contradictions": len(contradictions),
+
+        "entity_coverage": self.entity_coverage(
+
+            answer,
+
+            context,
+
+        ),
+
+        "numeric_coverage": self.numeric_coverage(
+
+            answer,
+
+            context,
+
+        ),
+
+        "date_coverage": self.date_coverage(
+
+            answer,
+
+            context,
+
+        ),
+
+    }
