@@ -875,3 +875,494 @@ def detection_summary(
         ),
 
     }
+
+# ======================================================
+# Hallucination Score
+# ======================================================
+
+def hallucination_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Overall hallucination score.
+    Lower hallucination -> Higher score.
+    """
+
+    summary = self.detection_summary(
+        answer,
+        context,
+    )
+
+    total_errors = (
+
+        summary["unsupported_claims"]
+
+        +
+
+        summary["entity_errors"]
+
+        +
+
+        summary["numeric_errors"]
+
+        +
+
+        summary["date_errors"]
+
+        +
+
+        summary["contradictions"]
+
+    )
+
+    total_claims = max(
+
+        1,
+
+        len(
+
+            self.extract_claims(answer)
+
+        ),
+
+    )
+
+    score = 1.0 - (
+
+        total_errors
+
+        /
+
+        total_claims
+
+    )
+
+    return round(
+
+        max(0.0, score),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Factual Consistency
+# ======================================================
+
+def factual_consistency(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Estimate factual consistency.
+    """
+
+    summary = self.detection_summary(
+
+        answer,
+
+        context,
+
+    )
+
+    scores = [
+
+        summary["entity_coverage"],
+
+        summary["numeric_coverage"],
+
+        summary["date_coverage"],
+
+    ]
+
+    return round(
+
+        sum(scores)
+
+        /
+
+        len(scores),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Evidence Coverage
+# ======================================================
+
+def evidence_coverage(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Percentage of claims backed by evidence.
+    """
+
+    unsupported = self.detect_unsupported_claims(
+
+        answer,
+
+        context,
+
+    )
+
+    claims = self.extract_claims(answer)
+
+    if not claims:
+
+        return 1.0
+
+    supported = len(claims) - len(unsupported)
+
+    return round(
+
+        supported
+
+        /
+
+        len(claims),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Confidence Score
+# ======================================================
+
+def confidence_score(
+    self,
+    answer: str,
+    context: List[str],
+) -> float:
+    """
+    Confidence based on multiple metrics.
+    """
+
+    return round(
+
+        (
+
+            self.hallucination_score(
+
+                answer,
+
+                context,
+
+            )
+
+            +
+
+            self.factual_consistency(
+
+                answer,
+
+                context,
+
+            )
+
+            +
+
+            self.evidence_coverage(
+
+                answer,
+
+                context,
+
+            )
+
+        )
+
+        /
+
+        3,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Evaluate
+# ======================================================
+
+def evaluate(
+    self,
+    answer: str,
+    context: List[str],
+) -> HallucinationResult:
+    """
+    Complete hallucination evaluation.
+    """
+
+    unsupported = self.detect_unsupported_claims(
+
+        answer,
+
+        context,
+
+    )
+
+    entity_errors = self.detect_entity_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    numeric_errors = self.detect_numeric_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    date_errors = self.detect_date_hallucination(
+
+        answer,
+
+        context,
+
+    )
+
+    contradictions = self.detect_contradictions(
+
+        answer,
+
+        context,
+
+    )
+
+    result = HallucinationResult(
+
+        score=self.hallucination_score(
+
+            answer,
+
+            context,
+
+        ),
+
+        unsupported_claims=len(
+
+            unsupported
+
+        ),
+
+        entity_errors=len(
+
+            entity_errors
+
+        ),
+
+        numeric_errors=len(
+
+            numeric_errors
+
+        ),
+
+        date_errors=len(
+
+            date_errors
+
+        ),
+
+        contradictions=len(
+
+            contradictions
+
+        ),
+
+        metadata={
+
+            "unsupported": unsupported,
+
+            "entity_errors": entity_errors,
+
+            "numeric_errors": numeric_errors,
+
+            "date_errors": date_errors,
+
+            "contradictions": contradictions,
+
+            "factual_consistency":
+
+                self.factual_consistency(
+
+                    answer,
+
+                    context,
+
+                ),
+
+            "evidence_coverage":
+
+                self.evidence_coverage(
+
+                    answer,
+
+                    context,
+
+                ),
+
+            "confidence":
+
+                self.confidence_score(
+
+                    answer,
+
+                    context,
+
+                ),
+
+        },
+
+    )
+
+    self.history.append(
+
+        result
+
+    )
+
+    return result
+
+
+# ======================================================
+# Batch Evaluate
+# ======================================================
+
+def batch_evaluate(
+    self,
+    answers: List[str],
+    contexts: List[List[str]],
+) -> List[HallucinationResult]:
+    """
+    Evaluate multiple answers.
+    """
+
+    if len(answers) != len(contexts):
+
+        raise HallucinationError(
+
+            "Answers and contexts "
+
+            "must have equal length."
+
+        )
+
+    results = []
+
+    for answer, context in zip(
+
+        answers,
+
+        contexts,
+
+    ):
+
+        results.append(
+
+            self.evaluate(
+
+                answer,
+
+                context,
+
+            )
+
+        )
+
+    return results
+
+
+# ======================================================
+# Average Score
+# ======================================================
+
+def average_score(
+    self,
+) -> float:
+    """
+    Average hallucination score.
+    """
+
+    if not self.history:
+
+        return 0.0
+
+    return round(
+
+        sum(
+
+            result.score
+
+            for result in self.history
+
+        )
+
+        /
+
+        len(self.history),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Best Result
+# ======================================================
+
+def best_result(
+    self,
+) -> Optional[HallucinationResult]:
+    """
+    Best evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return max(
+
+        self.history,
+
+        key=lambda x: x.score,
+
+    )
+
+
+# ======================================================
+# Worst Result
+# ======================================================
+
+def worst_result(
+    self,
+) -> Optional[HallucinationResult]:
+    """
+    Worst evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return min(
+
+        self.history,
+
+        key=lambda x: x.score,
+
+    )
