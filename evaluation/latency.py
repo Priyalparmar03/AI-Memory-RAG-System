@@ -1368,3 +1368,491 @@ def performance_summary(
 
     }
 
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> LatencyStatistics:
+    """
+    Compute latency statistics.
+    """
+
+    if not self.history:
+
+        return LatencyStatistics(
+
+            average_latency=0.0,
+
+            minimum_latency=0.0,
+
+            maximum_latency=0.0,
+
+            average_qps=0.0,
+
+            average_tokens_per_second=0.0,
+
+        )
+
+    return LatencyStatistics(
+
+        average_latency=round(
+
+            statistics.mean(
+
+                r.total_latency
+
+                for r in self.history
+
+            ),
+
+            3,
+
+        ),
+
+        minimum_latency=min(
+
+            r.total_latency
+
+            for r in self.history
+
+        ),
+
+        maximum_latency=max(
+
+            r.total_latency
+
+            for r in self.history
+
+        ),
+
+        average_qps=round(
+
+            statistics.mean(
+
+                r.queries_per_second
+
+                for r in self.history
+
+            ),
+
+            2,
+
+        ),
+
+        average_tokens_per_second=round(
+
+            statistics.mean(
+
+                r.tokens_per_second
+
+                for r in self.history
+
+            ),
+
+            2,
+
+        ),
+
+    )
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+    pipelines: List[PipelineTiming],
+    generated_tokens: Optional[List[int]] = None,
+) -> Dict[str, Any]:
+    """
+    Benchmark multiple pipeline runs.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    results = self.batch_evaluate(
+
+        pipelines,
+
+        generated_tokens,
+
+    )
+
+    elapsed = (
+
+        time.perf_counter()
+
+        - start
+
+    )
+
+    stats = self.statistics()
+
+    return {
+
+        "runs": len(results),
+
+        "execution_time_seconds": round(
+
+            elapsed,
+
+            3,
+
+        ),
+
+        "runs_per_second": round(
+
+            len(results)
+
+            /
+
+            max(elapsed, 1e-9),
+
+            2,
+
+        ),
+
+        "average_latency": stats.average_latency,
+
+        "minimum_latency": stats.minimum_latency,
+
+        "maximum_latency": stats.maximum_latency,
+
+        "average_qps": stats.average_qps,
+
+        "average_tokens_per_second":
+
+            stats.average_tokens_per_second,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Evaluator diagnostics.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "configuration": {
+
+            "warmup_runs":
+
+                self.config.warmup_runs,
+
+            "benchmark_runs":
+
+                self.config.benchmark_runs,
+
+            "monitor_cpu":
+
+                self.config.monitor_cpu,
+
+            "monitor_memory":
+
+                self.config.monitor_memory,
+
+            "monitor_tokens":
+
+                self.config.monitor_tokens,
+
+            "warning_latency":
+
+                self.config.warning_latency_threshold,
+
+            "high_latency":
+
+                self.config.high_latency_threshold,
+
+        },
+
+        "statistics": {
+
+            "average_latency":
+
+                stats.average_latency,
+
+            "minimum_latency":
+
+                stats.minimum_latency,
+
+            "maximum_latency":
+
+                stats.maximum_latency,
+
+            "average_qps":
+
+                stats.average_qps,
+
+            "average_tokens_per_second":
+
+                stats.average_tokens_per_second,
+
+        },
+
+        "history_size":
+
+            len(self.history),
+
+        "active_timers":
+
+            self.active_timers(),
+
+    }
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "evaluations":
+
+            len(self.history),
+
+        "average_latency_ms":
+
+            stats.average_latency,
+
+        "minimum_latency_ms":
+
+            stats.minimum_latency,
+
+        "maximum_latency_ms":
+
+            stats.maximum_latency,
+
+        "average_qps":
+
+            stats.average_qps,
+
+        "average_tokens_per_second":
+
+            stats.average_tokens_per_second,
+
+    }
+
+
+# ======================================================
+# Latest Result
+# ======================================================
+
+def latest_result(
+    self,
+) -> Optional[LatencyResult]:
+    """
+    Return latest evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return self.history[-1]
+
+
+# ======================================================
+# Export Results
+# ======================================================
+
+def export_results(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Export latency history.
+    """
+
+    return [
+
+        {
+
+            "latency_ms":
+
+                result.total_latency,
+
+            "throughput":
+
+                result.throughput,
+
+            "queries_per_second":
+
+                result.queries_per_second,
+
+            "tokens_per_second":
+
+                result.tokens_per_second,
+
+            "cpu_usage":
+
+                result.cpu_usage,
+
+            "memory_usage":
+
+                result.memory_usage,
+
+            "pipeline": {
+
+                "preprocessing":
+
+                    result.pipeline.preprocessing,
+
+                "chunking":
+
+                    result.pipeline.chunking,
+
+                "embedding":
+
+                    result.pipeline.embedding,
+
+                "retrieval":
+
+                    result.pipeline.retrieval,
+
+                "vectorstore":
+
+                    result.pipeline.vectorstore,
+
+                "reranking":
+
+                    result.pipeline.reranking,
+
+                "generation":
+
+                    result.pipeline.generation,
+
+                "total":
+
+                    result.pipeline.total,
+
+            },
+
+        }
+
+        for result in self.history
+
+    ]
+
+
+# ======================================================
+# Clear History
+# ======================================================
+
+def clear_history(
+    self,
+) -> None:
+    """
+    Clear latency history.
+    """
+
+    self.history.clear()
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup evaluator.
+    """
+
+    self.reset_all()
+
+    self.clear_history()
+
+    logger.info(
+
+        "LatencyEvaluator cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.history
+
+    )
+
+
+def __iter__(
+    self,
+):
+
+    return iter(
+
+        self.history
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    stats = self.statistics()
+
+    return (
+
+        "LatencyEvaluator("
+
+        f"evaluations={len(self.history)}, "
+
+        f"avg_latency={stats.average_latency:.2f} ms"
+
+        ")"
+
+    )
