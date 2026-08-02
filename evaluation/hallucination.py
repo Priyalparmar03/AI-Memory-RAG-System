@@ -1366,3 +1366,444 @@ def worst_result(
         key=lambda x: x.score,
 
     )
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Overall hallucination statistics.
+    """
+
+    if not self.history:
+
+        return {
+
+            "evaluations": 0,
+
+            "average_score": 0.0,
+
+            "entity_errors": 0,
+
+            "numeric_errors": 0,
+
+            "date_errors": 0,
+
+            "unsupported_claims": 0,
+
+            "contradictions": 0,
+
+        }
+
+    scores = [
+
+        result.score
+
+        for result in self.history
+
+    ]
+
+    return {
+
+        "evaluations": len(
+
+            self.history
+
+        ),
+
+        "average_score": round(
+
+            sum(scores)
+
+            /
+
+            len(scores),
+
+            4,
+
+        ),
+
+        "entity_errors": sum(
+
+            r.entity_errors
+
+            for r in self.history
+
+        ),
+
+        "numeric_errors": sum(
+
+            r.numeric_errors
+
+            for r in self.history
+
+        ),
+
+        "date_errors": sum(
+
+            r.date_errors
+
+            for r in self.history
+
+        ),
+
+        "unsupported_claims": sum(
+
+            r.unsupported_claims
+
+            for r in self.history
+
+        ),
+
+        "contradictions": sum(
+
+            r.contradictions
+
+            for r in self.history
+
+        ),
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Evaluator diagnostics.
+    """
+
+    return {
+
+        "configuration": {
+
+            "similarity_threshold":
+                self.config.similarity_threshold,
+
+            "ignore_case":
+                self.config.ignore_case,
+
+            "normalize_whitespace":
+                self.config.normalize_whitespace,
+
+            "extract_entities":
+                self.config.extract_entities,
+
+            "extract_numbers":
+                self.config.extract_numbers,
+
+            "extract_dates":
+                self.config.extract_dates,
+
+        },
+
+        "statistics":
+
+            self.statistics(),
+
+        "history_size":
+
+            len(self.history),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+    answers: List[str],
+    contexts: List[List[str]],
+) -> Dict[str, Any]:
+    """
+    Benchmark evaluator performance.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    results = self.batch_evaluate(
+
+        answers,
+
+        contexts,
+
+    )
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    return {
+
+        "evaluations":
+
+            len(results),
+
+        "execution_time":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "evaluations_per_second":
+
+            round(
+
+                len(results)
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "average_score":
+
+            self.average_score(),
+
+    }
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "evaluations":
+
+            stats["evaluations"],
+
+        "average_score":
+
+            stats["average_score"],
+
+        "unsupported_claims":
+
+            stats["unsupported_claims"],
+
+        "entity_errors":
+
+            stats["entity_errors"],
+
+        "numeric_errors":
+
+            stats["numeric_errors"],
+
+        "date_errors":
+
+            stats["date_errors"],
+
+        "contradictions":
+
+            stats["contradictions"],
+
+    }
+
+
+# ======================================================
+# Latest Result
+# ======================================================
+
+def latest_result(
+    self,
+) -> Optional[HallucinationResult]:
+    """
+    Return latest evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return self.history[-1]
+
+
+# ======================================================
+# Clear History
+# ======================================================
+
+def clear_history(
+    self,
+) -> None:
+    """
+    Clear evaluation history.
+    """
+
+    self.history.clear()
+
+
+# ======================================================
+# Export Results
+# ======================================================
+
+def export_results(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Export all evaluations.
+    """
+
+    return [
+
+        {
+
+            "score":
+
+                result.score,
+
+            "unsupported_claims":
+
+                result.unsupported_claims,
+
+            "entity_errors":
+
+                result.entity_errors,
+
+            "numeric_errors":
+
+                result.numeric_errors,
+
+            "date_errors":
+
+                result.date_errors,
+
+            "contradictions":
+
+                result.contradictions,
+
+            "metadata":
+
+                result.metadata,
+
+        }
+
+        for result in self.history
+
+    ]
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup evaluator resources.
+    """
+
+    self.clear_history()
+
+    logger.info(
+
+        "HallucinationEvaluator cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.history
+
+    )
+
+
+def __iter__(
+    self,
+):
+
+    return iter(
+
+        self.history
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    stats = self.statistics()
+
+    return (
+
+        "HallucinationEvaluator("
+
+        f"evaluations={stats['evaluations']}, "
+
+        f"average_score={stats['average_score']}, "
+
+        f"threshold={self.config.similarity_threshold}"
+
+        ")"
+
+    )
