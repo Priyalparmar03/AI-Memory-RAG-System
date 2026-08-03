@@ -1327,3 +1327,372 @@ def export_results(
         for result in self.history
 
     ]
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> RelevanceStatistics:
+    """
+    Compute relevance statistics.
+    """
+
+    if not self.history:
+
+        return RelevanceStatistics(
+
+            average_score=0.0,
+
+            minimum_score=0.0,
+
+            maximum_score=0.0,
+
+            evaluations=0,
+
+        )
+
+    scores = [
+
+        result.score
+
+        for result in self.history
+
+    ]
+
+    return RelevanceStatistics(
+
+        average_score=round(
+
+            sum(scores)
+
+            /
+
+            len(scores),
+
+            4,
+
+        ),
+
+        minimum_score=round(
+
+            min(scores),
+
+            4,
+
+        ),
+
+        maximum_score=round(
+
+            max(scores),
+
+            4,
+
+        ),
+
+        evaluations=len(
+
+            self.history
+
+        ),
+
+    )
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Evaluator diagnostics.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "configuration": {
+
+            "similarity_threshold":
+
+                self.config.similarity_threshold,
+
+            "keyword_weight":
+
+                self.config.keyword_weight,
+
+            "semantic_weight":
+
+                self.config.semantic_weight,
+
+            "lowercase":
+
+                self.config.lowercase,
+
+            "remove_punctuation":
+
+                self.config.remove_punctuation,
+
+            "normalize_whitespace":
+
+                self.config.normalize_whitespace,
+
+        },
+
+        "statistics": {
+
+            "average_score":
+
+                stats.average_score,
+
+            "minimum_score":
+
+                stats.minimum_score,
+
+            "maximum_score":
+
+                stats.maximum_score,
+
+            "evaluations":
+
+                stats.evaluations,
+
+        },
+
+        "history_size":
+
+            len(self.history),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+    queries: List[str],
+    retrieved_batches: List[List[str]],
+) -> Dict[str, Any]:
+    """
+    Benchmark evaluator.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    results = self.batch_evaluate(
+
+        queries,
+
+        retrieved_batches,
+
+    )
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    stats = self.statistics()
+
+    return {
+
+        "evaluations":
+
+            len(results),
+
+        "execution_time_seconds":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "evaluations_per_second":
+
+            round(
+
+                len(results)
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "average_score":
+
+            stats.average_score,
+
+        "minimum_score":
+
+            stats.minimum_score,
+
+        "maximum_score":
+
+            stats.maximum_score,
+
+    }
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "evaluations":
+
+            stats.evaluations,
+
+        "average_score":
+
+            stats.average_score,
+
+        "minimum_score":
+
+            stats.minimum_score,
+
+        "maximum_score":
+
+            stats.maximum_score,
+
+        "distribution":
+
+            self.relevance_distribution(),
+
+    }
+
+
+# ======================================================
+# Clear History
+# ======================================================
+
+def clear_history(
+    self,
+) -> None:
+    """
+    Clear evaluation history.
+    """
+
+    self.history.clear()
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup evaluator.
+    """
+
+    self.clear_history()
+
+    logger.info(
+
+        "RelevanceEvaluator cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.history
+
+    )
+
+
+def __iter__(
+    self,
+):
+
+    return iter(
+
+        self.history
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    stats = self.statistics()
+
+    return (
+
+        "RelevanceEvaluator("
+
+        f"evaluations={stats.evaluations}, "
+
+        f"average_score={stats.average_score:.4f}, "
+
+        f"threshold={self.config.similarity_threshold}"
+
+        ")"
+
+    )
