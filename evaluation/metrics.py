@@ -1507,3 +1507,447 @@ def mean_absolute_error(
         4,
 
     )
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Overall metric statistics.
+    """
+
+    if not self.history:
+
+        return {
+
+            "metrics": 0,
+
+            "average": 0.0,
+
+            "minimum": 0.0,
+
+            "maximum": 0.0,
+
+            "median": 0.0,
+
+            "std": 0.0,
+
+        }
+
+    scores = [
+
+        metric.score
+
+        for metric in self.history
+
+        if isinstance(
+
+            metric.score,
+
+            (int, float),
+
+        )
+
+    ]
+
+    if not scores:
+
+        return {
+
+            "metrics": len(self.history),
+
+        }
+
+    return {
+
+        "metrics": len(
+
+            self.history
+
+        ),
+
+        "average": round(
+
+            statistics.mean(scores),
+
+            4,
+
+        ),
+
+        "minimum": round(
+
+            min(scores),
+
+            4,
+
+        ),
+
+        "maximum": round(
+
+            max(scores),
+
+            4,
+
+        ),
+
+        "median": round(
+
+            statistics.median(scores),
+
+            4,
+
+        ),
+
+        "std": round(
+
+            statistics.pstdev(scores),
+
+            4,
+
+        )
+
+        if len(scores) > 1
+
+        else 0.0,
+
+    }
+
+
+# ======================================================
+# Metric History
+# ======================================================
+
+def metric_history(
+    self,
+) -> List[MetricResult]:
+    """
+    Return metric history.
+    """
+
+    return list(
+
+        self.history
+
+    )
+
+
+# ======================================================
+# Latest Metric
+# ======================================================
+
+def latest_metric(
+    self,
+) -> Optional[MetricResult]:
+    """
+    Return latest metric.
+    """
+
+    if not self.history:
+
+        return None
+
+    return self.history[-1]
+
+
+# ======================================================
+# Find Metric
+# ======================================================
+
+def find_metric(
+    self,
+    name: str,
+) -> List[MetricResult]:
+    """
+    Find metrics by name.
+    """
+
+    return [
+
+        metric
+
+        for metric in self.history
+
+        if metric.name == name
+
+    ]
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Metric diagnostics.
+    """
+
+    return {
+
+        "configuration": {
+
+            "lowercase":
+
+                self.config.lowercase,
+
+            "remove_punctuation":
+
+                self.config.remove_punctuation,
+
+            "normalize_whitespace":
+
+                self.config.normalize_whitespace,
+
+            "epsilon":
+
+                self.config.epsilon,
+
+        },
+
+        "statistics":
+
+            self.statistics(),
+
+        "history_size":
+
+            len(self.history),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+    function,
+    *args,
+    iterations: int = 100,
+    **kwargs,
+) -> Dict[str, float]:
+    """
+    Benchmark any metric function.
+    """
+
+    import time
+
+    timings = []
+
+    for _ in range(iterations):
+
+        start = time.perf_counter()
+
+        function(
+
+            *args,
+
+            **kwargs,
+
+        )
+
+        timings.append(
+
+            (
+
+                time.perf_counter()
+
+                -
+
+                start
+
+            )
+
+            * 1000
+
+        )
+
+    return {
+
+        "iterations":
+
+            iterations,
+
+        "average_ms":
+
+            round(
+
+                statistics.mean(
+
+                    timings
+
+                ),
+
+                4,
+
+            ),
+
+        "minimum_ms":
+
+            round(
+
+                min(
+
+                    timings
+
+                ),
+
+                4,
+
+            ),
+
+        "maximum_ms":
+
+            round(
+
+                max(
+
+                    timings
+
+                ),
+
+                4,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Export Results
+# ======================================================
+
+def export_results(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Export metric history.
+    """
+
+    return [
+
+        {
+
+            "name":
+
+                metric.name,
+
+            "score":
+
+                metric.score,
+
+            "metadata":
+
+                metric.metadata,
+
+        }
+
+        for metric
+
+        in self.history
+
+    ]
+
+
+# ======================================================
+# Clear History
+# ======================================================
+
+def clear_history(
+    self,
+) -> None:
+    """
+    Clear metric history.
+    """
+
+    self.history.clear()
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup calculator.
+    """
+
+    self.clear_history()
+
+    logger.info(
+
+        "MetricCalculator cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.history
+
+    )
+
+
+def __iter__(
+    self,
+):
+
+    return iter(
+
+        self.history
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    stats = self.statistics()
+
+    return (
+
+        "MetricCalculator("
+
+        f"metrics={stats.get('metrics', 0)}, "
+
+        f"average={stats.get('average', 0.0)}"
+
+        ")"
+
+    )
