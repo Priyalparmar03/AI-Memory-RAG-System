@@ -453,3 +453,546 @@ class MetricCalculator:
         )
 
         return result
+
+# ======================================================
+# Precision@K
+# ======================================================
+
+def precision_at_k(
+    self,
+    retrieved: List[Any],
+    relevant: List[Any],
+    k: int = 5,
+) -> float:
+    """
+    Precision@K
+    """
+
+    if k <= 0:
+
+        raise MetricError(
+
+            "k must be positive."
+
+        )
+
+    retrieved = retrieved[:k]
+
+    if not retrieved:
+
+        return 0.0
+
+    hits = sum(
+
+        1
+
+        for item in retrieved
+
+        if item in relevant
+
+    )
+
+    score = hits / len(retrieved)
+
+    self.save_metric(
+
+        "precision@k",
+
+        score,
+
+        k=k,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Recall@K
+# ======================================================
+
+def recall_at_k(
+    self,
+    retrieved: List[Any],
+    relevant: List[Any],
+    k: int = 5,
+) -> float:
+    """
+    Recall@K
+    """
+
+    if not relevant:
+
+        return 0.0
+
+    retrieved = retrieved[:k]
+
+    hits = sum(
+
+        1
+
+        for item in retrieved
+
+        if item in relevant
+
+    )
+
+    score = hits / len(relevant)
+
+    self.save_metric(
+
+        "recall@k",
+
+        score,
+
+        k=k,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# F1 Score
+# ======================================================
+
+def f1_score(
+    self,
+    precision: float,
+    recall: float,
+) -> float:
+    """
+    F1 Score.
+    """
+
+    denominator = (
+
+        precision
+
+        +
+
+        recall
+
+    )
+
+    if denominator == 0:
+
+        return 0.0
+
+    score = (
+
+        2
+
+        * precision
+
+        * recall
+
+    ) / denominator
+
+    self.save_metric(
+
+        "f1",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Mean Reciprocal Rank (MRR)
+# ======================================================
+
+def mrr(
+    self,
+    retrieved: List[Any],
+    relevant: List[Any],
+) -> float:
+    """
+    Mean Reciprocal Rank for a
+    single query.
+    """
+
+    for index, item in enumerate(
+
+        retrieved,
+
+        start=1,
+
+    ):
+
+        if item in relevant:
+
+            score = 1.0 / index
+
+            self.save_metric(
+
+                "mrr",
+
+                score,
+
+            )
+
+            return round(
+
+                score,
+
+                4,
+
+            )
+
+    return 0.0
+
+
+# ======================================================
+# Mean Reciprocal Rank Batch
+# ======================================================
+
+def mean_reciprocal_rank(
+    self,
+    retrieved_lists: List[List[Any]],
+    relevant_lists: List[List[Any]],
+) -> float:
+    """
+    Average MRR across queries.
+    """
+
+    if len(retrieved_lists) != len(relevant_lists):
+
+        raise MetricError(
+
+            "List size mismatch."
+
+        )
+
+    scores = [
+
+        self.mrr(
+
+            retrieved,
+
+            relevant,
+
+        )
+
+        for retrieved, relevant
+
+        in zip(
+
+            retrieved_lists,
+
+            relevant_lists,
+
+        )
+
+    ]
+
+    if not scores:
+
+        return 0.0
+
+    return round(
+
+        sum(scores)
+
+        /
+
+        len(scores),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Discounted Cumulative Gain
+# ======================================================
+
+def dcg(
+    self,
+    relevance_scores: List[float],
+    k: int = 5,
+) -> float:
+    """
+    Discounted Cumulative Gain.
+    """
+
+    relevance_scores = relevance_scores[:k]
+
+    score = 0.0
+
+    for index, relevance in enumerate(
+
+        relevance_scores,
+
+        start=1,
+
+    ):
+
+        score += (
+
+            relevance
+
+            /
+
+            math.log2(
+
+                index + 1
+
+            )
+
+        )
+
+    return score
+
+
+# ======================================================
+# Normalized DCG
+# ======================================================
+
+def ndcg(
+    self,
+    relevance_scores: List[float],
+    k: int = 5,
+) -> float:
+    """
+    Normalized DCG.
+    """
+
+    dcg = self.dcg(
+
+        relevance_scores,
+
+        k,
+
+    )
+
+    ideal = sorted(
+
+        relevance_scores,
+
+        reverse=True,
+
+    )
+
+    idcg = self.dcg(
+
+        ideal,
+
+        k,
+
+    )
+
+    if idcg == 0:
+
+        return 0.0
+
+    score = dcg / idcg
+
+    self.save_metric(
+
+        "ndcg",
+
+        score,
+
+        k=k,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Hit Rate@K
+# ======================================================
+
+def hit_rate_at_k(
+    self,
+    retrieved: List[Any],
+    relevant: List[Any],
+    k: int = 5,
+) -> float:
+    """
+    Hit Rate@K.
+    """
+
+    retrieved = retrieved[:k]
+
+    score = any(
+
+        item in relevant
+
+        for item in retrieved
+
+    )
+
+    value = 1.0 if score else 0.0
+
+    self.save_metric(
+
+        "hit_rate",
+
+        value,
+
+        k=k,
+
+    )
+
+    return value
+
+
+# ======================================================
+# Average Precision
+# ======================================================
+
+def average_precision(
+    self,
+    retrieved: List[Any],
+    relevant: List[Any],
+) -> float:
+    """
+    Average Precision.
+    """
+
+    if not relevant:
+
+        return 0.0
+
+    hits = 0
+
+    precision_sum = 0.0
+
+    for index, item in enumerate(
+
+        retrieved,
+
+        start=1,
+
+    ):
+
+        if item in relevant:
+
+            hits += 1
+
+            precision_sum += (
+
+                hits
+
+                / index
+
+            )
+
+    if hits == 0:
+
+        return 0.0
+
+    score = (
+
+        precision_sum
+
+        /
+
+        len(relevant)
+
+    )
+
+    self.save_metric(
+
+        "average_precision",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Mean Average Precision (MAP)
+# ======================================================
+
+def mean_average_precision(
+    self,
+    retrieved_lists: List[List[Any]],
+    relevant_lists: List[List[Any]],
+) -> float:
+    """
+    MAP over multiple queries.
+    """
+
+    if len(retrieved_lists) != len(relevant_lists):
+
+        raise MetricError(
+
+            "List size mismatch."
+
+        )
+
+    scores = [
+
+        self.average_precision(
+
+            retrieved,
+
+            relevant,
+
+        )
+
+        for retrieved, relevant
+
+        in zip(
+
+            retrieved_lists,
+
+            relevant_lists,
+
+        )
+
+    ]
+
+    if not scores:
+
+        return 0.0
+
+    return round(
+
+        sum(scores)
+
+        /
+
+        len(scores),
+
+        4,
+
+    )
