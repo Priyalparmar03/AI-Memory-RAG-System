@@ -882,3 +882,448 @@ def irrelevant_documents(
             )
 
     return irrelevant
+
+# ======================================================
+# Evaluate
+# ======================================================
+
+def evaluate(
+    self,
+    query: str,
+    retrieved_documents: List[str],
+) -> RelevanceResult:
+    """
+    Complete relevance evaluation.
+    """
+
+    if not retrieved_documents:
+
+        result = RelevanceResult(
+
+            score=0.0,
+
+            keyword_score=0.0,
+
+            semantic_score=0.0,
+
+            document_count=0,
+
+            relevant_documents=0,
+
+            metadata={
+
+                "documents": [],
+
+            },
+
+        )
+
+        self.history.append(result)
+
+        return result
+
+    keyword_scores = []
+
+    semantic_scores = []
+
+    overall_scores = []
+
+    relevant_count = 0
+
+    ranked_documents = []
+
+    for document in retrieved_documents:
+
+        relevance = self.document_relevance(
+
+            query,
+
+            document,
+
+        )
+
+        keyword_scores.append(
+
+            relevance["keyword_score"]
+
+        )
+
+        semantic_scores.append(
+
+            relevance["semantic_score"]
+
+        )
+
+        overall_scores.append(
+
+            relevance["score"]
+
+        )
+
+        if (
+
+            relevance["score"]
+
+            >=
+
+            self.config.similarity_threshold
+
+        ):
+
+            relevant_count += 1
+
+        ranked_documents.append(
+
+            {
+
+                "document": document,
+
+                "score":
+
+                    relevance["score"],
+
+            }
+
+        )
+
+    result = RelevanceResult(
+
+        score=round(
+
+            sum(overall_scores)
+
+            /
+
+            len(overall_scores),
+
+            4,
+
+        ),
+
+        keyword_score=round(
+
+            sum(keyword_scores)
+
+            /
+
+            len(keyword_scores),
+
+            4,
+
+        ),
+
+        semantic_score=round(
+
+            sum(semantic_scores)
+
+            /
+
+            len(semantic_scores),
+
+            4,
+
+        ),
+
+        document_count=len(
+
+            retrieved_documents
+
+        ),
+
+        relevant_documents=relevant_count,
+
+        metadata={
+
+            "ranked_documents":
+
+                ranked_documents,
+
+        },
+
+    )
+
+    self.history.append(
+
+        result
+
+    )
+
+    return result
+
+
+# ======================================================
+# Batch Evaluate
+# ======================================================
+
+def batch_evaluate(
+    self,
+    queries: List[str],
+    retrieved_batches: List[List[str]],
+) -> List[RelevanceResult]:
+    """
+    Evaluate multiple queries.
+    """
+
+    if len(queries) != len(retrieved_batches):
+
+        raise RelevanceError(
+
+            "Queries and retrieved "
+
+            "documents size mismatch."
+
+        )
+
+    results = []
+
+    for query, documents in zip(
+
+        queries,
+
+        retrieved_batches,
+
+    ):
+
+        results.append(
+
+            self.evaluate(
+
+                query,
+
+                documents,
+
+            )
+
+        )
+
+    return results
+
+
+# ======================================================
+# Compare Retrievers
+# ======================================================
+
+def compare_retrievers(
+    self,
+    query: str,
+    retrievers: Dict[str, List[str]],
+) -> Dict[str, RelevanceResult]:
+    """
+    Compare multiple retrievers.
+    """
+
+    comparison = {}
+
+    for name, documents in retrievers.items():
+
+        comparison[name] = self.evaluate(
+
+            query,
+
+            documents,
+
+        )
+
+    return comparison
+
+
+# ======================================================
+# Average Score
+# ======================================================
+
+def average_score(
+    self,
+) -> float:
+    """
+    Average relevance score.
+    """
+
+    if not self.history:
+
+        return 0.0
+
+    return round(
+
+        sum(
+
+            result.score
+
+            for result in self.history
+
+        )
+
+        /
+
+        len(self.history),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Best Result
+# ======================================================
+
+def best_result(
+    self,
+) -> Optional[RelevanceResult]:
+    """
+    Best relevance result.
+    """
+
+    if not self.history:
+
+        return None
+
+    return max(
+
+        self.history,
+
+        key=lambda x: x.score,
+
+    )
+
+
+# ======================================================
+# Worst Result
+# ======================================================
+
+def worst_result(
+    self,
+) -> Optional[RelevanceResult]:
+    """
+    Worst relevance result.
+    """
+
+    if not self.history:
+
+        return None
+
+    return min(
+
+        self.history,
+
+        key=lambda x: x.score,
+
+    )
+
+
+# ======================================================
+# Latest Result
+# ======================================================
+
+def latest_result(
+    self,
+) -> Optional[RelevanceResult]:
+    """
+    Return latest evaluation.
+    """
+
+    if not self.history:
+
+        return None
+
+    return self.history[-1]
+
+
+# ======================================================
+# Relevance Distribution
+# ======================================================
+
+def relevance_distribution(
+    self,
+) -> Dict[str, int]:
+    """
+    Distribution of relevance scores.
+    """
+
+    distribution = {
+
+        "high": 0,
+
+        "medium": 0,
+
+        "low": 0,
+
+    }
+
+    for result in self.history:
+
+        if result.score >= 0.80:
+
+            distribution["high"] += 1
+
+        elif result.score >= 0.50:
+
+            distribution["medium"] += 1
+
+        else:
+
+            distribution["low"] += 1
+
+    return distribution
+
+
+# ======================================================
+# History
+# ======================================================
+
+def evaluation_history(
+    self,
+) -> List[RelevanceResult]:
+    """
+    Return evaluation history.
+    """
+
+    return list(
+
+        self.history
+
+    )
+
+
+# ======================================================
+# Export Results
+# ======================================================
+
+def export_results(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Export evaluation results.
+    """
+
+    return [
+
+        {
+
+            "score":
+
+                result.score,
+
+            "keyword_score":
+
+                result.keyword_score,
+
+            "semantic_score":
+
+                result.semantic_score,
+
+            "document_count":
+
+                result.document_count,
+
+            "relevant_documents":
+
+                result.relevant_documents,
+
+            "metadata":
+
+                result.metadata,
+
+        }
+
+        for result in self.history
+
+    ]
