@@ -996,3 +996,514 @@ def mean_average_precision(
         4,
 
     )
+
+# ======================================================
+# BLEU Score
+# ======================================================
+
+def bleu_score(
+    self,
+    reference: str,
+    candidate: str,
+) -> float:
+    """
+    Compute BLEU score.
+    """
+
+    try:
+
+        from sacrebleu.metrics import BLEU
+
+        bleu = BLEU()
+
+        score = bleu.sentence_score(
+
+            candidate,
+
+            [reference],
+
+        ).score / 100.0
+
+    except ImportError:
+
+        raise MetricError(
+
+            "Install 'sacrebleu' package."
+
+        )
+
+    self.save_metric(
+
+        "bleu",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# ROUGE Score
+# ======================================================
+
+def rouge_score(
+    self,
+    reference: str,
+    candidate: str,
+) -> Dict[str, float]:
+    """
+    Compute ROUGE scores.
+    """
+
+    try:
+
+        from rouge_score import rouge_scorer
+
+        scorer = rouge_scorer.RougeScorer(
+
+            [
+
+                "rouge1",
+
+                "rouge2",
+
+                "rougeL",
+
+            ],
+
+            use_stemmer=True,
+
+        )
+
+        scores = scorer.score(
+
+            reference,
+
+            candidate,
+
+        )
+
+    except ImportError:
+
+        raise MetricError(
+
+            "Install 'rouge-score' package."
+
+        )
+
+    result = {
+
+        metric: round(
+
+            value.fmeasure,
+
+            4,
+
+        )
+
+        for metric, value
+
+        in scores.items()
+
+    }
+
+    self.save_metric(
+
+        "rouge",
+
+        result["rougeL"],
+
+    )
+
+    return result
+
+
+# ======================================================
+# Exact Match
+# ======================================================
+
+def exact_match(
+    self,
+    reference: str,
+    candidate: str,
+) -> float:
+    """
+    Exact Match score.
+    """
+
+    score = (
+
+        self.normalize(reference)
+
+        ==
+
+        self.normalize(candidate)
+
+    )
+
+    value = 1.0 if score else 0.0
+
+    self.save_metric(
+
+        "exact_match",
+
+        value,
+
+    )
+
+    return value
+
+
+# ======================================================
+# Accuracy
+# ======================================================
+
+def accuracy(
+    self,
+    y_true: List[Any],
+    y_pred: List[Any],
+) -> float:
+    """
+    Classification accuracy.
+    """
+
+    if len(y_true) != len(y_pred):
+
+        raise MetricError(
+
+            "Length mismatch."
+
+        )
+
+    correct = sum(
+
+        1
+
+        for truth, pred
+
+        in zip(
+
+            y_true,
+
+            y_pred,
+
+        )
+
+        if truth == pred
+
+    )
+
+    score = correct / len(y_true)
+
+    self.save_metric(
+
+        "accuracy",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Precision
+# ======================================================
+
+def precision(
+    self,
+    tp: int,
+    fp: int,
+) -> float:
+    """
+    Precision.
+    """
+
+    denominator = tp + fp
+
+    if denominator == 0:
+
+        return 0.0
+
+    score = tp / denominator
+
+    self.save_metric(
+
+        "precision",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Recall
+# ======================================================
+
+def recall(
+    self,
+    tp: int,
+    fn: int,
+) -> float:
+    """
+    Recall.
+    """
+
+    denominator = tp + fn
+
+    if denominator == 0:
+
+        return 0.0
+
+    score = tp / denominator
+
+    self.save_metric(
+
+        "recall",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Specificity
+# ======================================================
+
+def specificity(
+    self,
+    tn: int,
+    fp: int,
+) -> float:
+    """
+    Specificity.
+    """
+
+    denominator = tn + fp
+
+    if denominator == 0:
+
+        return 0.0
+
+    score = tn / denominator
+
+    self.save_metric(
+
+        "specificity",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Embedding Similarity
+# ======================================================
+
+def embedding_similarity(
+    self,
+    embedding1: np.ndarray,
+    embedding2: np.ndarray,
+) -> float:
+    """
+    Cosine similarity between embeddings.
+    """
+
+    score = self.cosine_similarity_score(
+
+        embedding1,
+
+        embedding2,
+
+    )
+
+    self.save_metric(
+
+        "embedding_similarity",
+
+        score,
+
+    )
+
+    return score
+
+
+# ======================================================
+# Mean Squared Error
+# ======================================================
+
+def mean_squared_error(
+    self,
+    y_true: List[float],
+    y_pred: List[float],
+) -> float:
+    """
+    Mean Squared Error.
+    """
+
+    if len(y_true) != len(y_pred):
+
+        raise MetricError(
+
+            "Length mismatch."
+
+        )
+
+    score = np.mean(
+
+        (
+
+            np.asarray(y_true)
+
+            -
+
+            np.asarray(y_pred)
+
+        ) ** 2
+
+    )
+
+    self.save_metric(
+
+        "mse",
+
+        float(score),
+
+    )
+
+    return round(
+
+        float(score),
+
+        4,
+
+    )
+
+
+# ======================================================
+# Root Mean Squared Error
+# ======================================================
+
+def root_mean_squared_error(
+    self,
+    y_true: List[float],
+    y_pred: List[float],
+) -> float:
+    """
+    Root Mean Squared Error.
+    """
+
+    mse = self.mean_squared_error(
+
+        y_true,
+
+        y_pred,
+
+    )
+
+    score = math.sqrt(mse)
+
+    self.save_metric(
+
+        "rmse",
+
+        score,
+
+    )
+
+    return round(
+
+        score,
+
+        4,
+
+    )
+
+
+# ======================================================
+# Mean Absolute Error
+# ======================================================
+
+def mean_absolute_error(
+    self,
+    y_true: List[float],
+    y_pred: List[float],
+) -> float:
+    """
+    Mean Absolute Error.
+    """
+
+    if len(y_true) != len(y_pred):
+
+        raise MetricError(
+
+            "Length mismatch."
+
+        )
+
+    score = np.mean(
+
+        np.abs(
+
+            np.asarray(y_true)
+
+            -
+
+            np.asarray(y_pred)
+
+        )
+
+    )
+
+    self.save_metric(
+
+        "mae",
+
+        float(score),
+
+    )
+
+    return round(
+
+        float(score),
+
+        4,
+
+    )
