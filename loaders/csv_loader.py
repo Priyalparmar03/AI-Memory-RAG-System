@@ -1115,3 +1115,359 @@ def shape(
     """
 
     return self.read_csv().shape
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    CSV diagnostics.
+    """
+
+    return {
+
+        "loader":
+
+            self.__class__.__name__,
+
+        "file":
+
+            self.file_name,
+
+        "extension":
+
+            self.extension,
+
+        "mime_type":
+
+            self.mime_type,
+
+        "file_size":
+
+            self.file_size,
+
+        "rows":
+
+            self.row_count,
+
+        "columns":
+
+            self.column_count,
+
+        "encoding":
+
+            self.encoding,
+
+        "delimiter":
+
+            self.delimiter,
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark CSV loading.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    dataframe = self.read_csv()
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    return {
+
+        "execution_time":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "rows_per_second":
+
+            round(
+
+                len(dataframe)
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "cells_per_second":
+
+            round(
+
+                (
+
+                    dataframe.shape[0]
+
+                    *
+
+                    dataframe.shape[1]
+
+                )
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Validate CSV
+# ======================================================
+
+def validate(
+    self,
+) -> bool:
+    """
+    Validate CSV file.
+    """
+
+    try:
+
+        dataframe = self.read_csv()
+
+        return (
+
+            dataframe
+
+            is not None
+
+        )
+
+    except Exception:
+
+        return False
+
+
+# ======================================================
+# Reload CSV
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload CSV file.
+    """
+
+    self.dataframe = None
+
+    self.read_csv()
+
+    logger.info(
+
+        "CSV reloaded."
+
+    )
+
+
+# ======================================================
+# Export CSV
+# ======================================================
+
+def export_csv(
+    self,
+    output_path: str,
+    index: bool = False,
+) -> str:
+    """
+    Export DataFrame as CSV.
+    """
+
+    dataframe = self.read_csv()
+
+    dataframe.to_csv(
+
+        output_path,
+
+        index=index,
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Release DataFrame.
+    """
+
+    self.dataframe = None
+
+    logger.info(
+
+        "CSV resources released."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    self.read_csv()
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of rows.
+    """
+
+    return self.row_count
+
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over rows.
+    """
+
+    dataframe = self.read_csv()
+
+    return iter(
+
+        dataframe.itertuples(
+
+            index=False
+
+        )
+
+    )
+
+
+def __getitem__(
+    self,
+    index,
+):
+    """
+    Access row(s) by index.
+    """
+
+    dataframe = self.read_csv()
+
+    return dataframe.iloc[
+
+        index
+
+    ]
+
+
+def __contains__(
+    self,
+    column_name: str,
+):
+    """
+    Check if column exists.
+    """
+
+    return (
+
+        column_name
+
+        in
+
+        self.read_csv().columns
+
+    )
+
+
+def __repr__(
+    self,
+):
+    """
+    String representation.
+    """
+
+    return (
+
+        "CSVLoader("
+
+        f"file='{self.file_name}', "
+
+        f"rows={self.row_count}, "
+
+        f"columns={self.column_count}"
+
+        ")"
+
+    )
