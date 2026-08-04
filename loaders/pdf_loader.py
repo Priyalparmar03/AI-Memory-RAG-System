@@ -385,3 +385,418 @@ class PDFLoader(BaseLoader):
             f"{self.file_name}"
 
         )
+
+# ======================================================
+# Extract Pages
+# ======================================================
+
+def extract_pages(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract page-wise text.
+    """
+
+    document = self.open_pdf()
+
+    pages = []
+
+    for page_number, page in enumerate(
+        document,
+        start=1,
+    ):
+
+        pages.append(
+
+            {
+
+                "page": page_number,
+
+                "text": page.get_text(),
+
+                "width": page.rect.width,
+
+                "height": page.rect.height,
+
+                "rotation": page.rotation,
+
+            }
+
+        )
+
+    return pages
+
+
+# ======================================================
+# Extract Metadata
+# ======================================================
+
+def extract_metadata(
+    self,
+) -> Dict[str, Any]:
+    """
+    Extended PDF metadata.
+    """
+
+    document = self.open_pdf()
+
+    metadata = self.document_info()
+
+    metadata.update(
+
+        {
+
+            "is_pdf":
+
+                True,
+
+            "page_count":
+
+                self.page_count,
+
+            "file_size":
+
+                self.file_size,
+
+            "mime_type":
+
+                self.mime_type,
+
+        }
+
+    )
+
+    return metadata
+
+
+# ======================================================
+# Extract Tables
+# ======================================================
+
+def extract_tables(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract tables using pdfplumber.
+    """
+
+    try:
+
+        import pdfplumber
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install pdfplumber."
+
+        )
+
+    tables = []
+
+    with pdfplumber.open(
+        self.file_path
+    ) as pdf:
+
+        for page_number, page in enumerate(
+            pdf.pages,
+            start=1,
+        ):
+
+            extracted = page.extract_tables()
+
+            for index, table in enumerate(
+                extracted,
+                start=1,
+            ):
+
+                tables.append(
+
+                    {
+
+                        "page": page_number,
+
+                        "table": index,
+
+                        "rows": table,
+
+                    }
+
+                )
+
+    return tables
+
+
+# ======================================================
+# Extract Links
+# ======================================================
+
+def extract_links(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract hyperlinks.
+    """
+
+    document = self.open_pdf()
+
+    links = []
+
+    for page_number, page in enumerate(
+        document,
+        start=1,
+    ):
+
+        for link in page.get_links():
+
+            uri = link.get("uri")
+
+            if uri:
+
+                links.append(
+
+                    {
+
+                        "page": page_number,
+
+                        "url": uri,
+
+                    }
+
+                )
+
+    return links
+
+
+# ======================================================
+# Extract Outline
+# ======================================================
+
+def extract_outline(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract PDF bookmarks.
+    """
+
+    document = self.open_pdf()
+
+    toc = document.get_toc()
+
+    outline = []
+
+    for level, title, page in toc:
+
+        outline.append(
+
+            {
+
+                "level": level,
+
+                "title": title,
+
+                "page": page,
+
+            }
+
+        )
+
+    return outline
+
+
+# ======================================================
+# Search Text
+# ======================================================
+
+def search_text(
+    self,
+    keyword: str,
+) -> List[Dict[str, Any]]:
+    """
+    Search keyword in PDF.
+    """
+
+    document = self.open_pdf()
+
+    results = []
+
+    keyword = keyword.lower()
+
+    for page_number, page in enumerate(
+        document,
+        start=1,
+    ):
+
+        text = page.get_text()
+
+        if keyword in text.lower():
+
+            results.append(
+
+                {
+
+                    "page": page_number,
+
+                    "matches": len(
+
+                        page.search_for(
+                            keyword
+                        )
+
+                    ),
+
+                    "preview": text[
+                        :300
+                    ],
+
+                }
+
+            )
+
+    return results
+
+
+# ======================================================
+# Extract Page
+# ======================================================
+
+def extract_page(
+    self,
+    page_number: int,
+) -> Dict[str, Any]:
+    """
+    Extract one page.
+    """
+
+    document = self.open_pdf()
+
+    if (
+
+        page_number < 1
+
+        or
+
+        page_number > self.page_count
+
+    ):
+
+        raise LoaderError(
+
+            "Invalid page number."
+
+        )
+
+    page = document[
+        page_number - 1
+    ]
+
+    return {
+
+        "page": page_number,
+
+        "text": page.get_text(),
+
+        "width": page.rect.width,
+
+        "height": page.rect.height,
+
+        "rotation": page.rotation,
+
+    }
+
+
+# ======================================================
+# Extract Page Range
+# ======================================================
+
+def extract_page_range(
+    self,
+    start_page: int,
+    end_page: int,
+) -> List[Dict[str, Any]]:
+    """
+    Extract page range.
+    """
+
+    if start_page > end_page:
+
+        raise LoaderError(
+
+            "Invalid page range."
+
+        )
+
+    pages = []
+
+    for page in range(
+        start_page,
+        end_page + 1,
+    ):
+
+        pages.append(
+
+            self.extract_page(
+                page
+            )
+
+        )
+
+    return pages
+
+
+# ======================================================
+# Text Per Page
+# ======================================================
+
+def text_per_page(
+    self,
+) -> Dict[int, str]:
+    """
+    Dictionary of page -> text.
+    """
+
+    pages = {}
+
+    for page in self.extract_pages():
+
+        pages[
+            page["page"]
+        ] = page["text"]
+
+    return pages
+
+
+# ======================================================
+# Table Count
+# ======================================================
+
+def table_count(
+    self,
+) -> int:
+    """
+    Total tables.
+    """
+
+    return len(
+
+        self.extract_tables()
+
+    )
+
+
+# ======================================================
+# Link Count
+# ======================================================
+
+def link_count(
+    self,
+) -> int:
+    """
+    Total hyperlinks.
+    """
+
+    return len(
+
+        self.extract_links()
+
+    )
