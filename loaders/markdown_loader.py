@@ -301,3 +301,344 @@ class MarkdownLoader(BaseLoader):
             ")"
 
         )
+
+# ======================================================
+# Extract Headings
+# ======================================================
+
+def extract_headings(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract markdown headings.
+    """
+
+    text = self.read_markdown()
+
+    headings = []
+
+    pattern = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
+
+    for match in pattern.finditer(text):
+
+        level = len(match.group(1))
+
+        title = match.group(2).strip()
+
+        headings.append(
+
+            {
+
+                "level": level,
+
+                "title": title,
+
+            }
+
+        )
+
+    return headings
+
+
+# ======================================================
+# Extract Code Blocks
+# ======================================================
+
+def extract_code_blocks(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract fenced code blocks.
+    """
+
+    text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"```(\w+)?\n(.*?)```",
+
+        re.DOTALL,
+
+    )
+
+    code_blocks = []
+
+    for index, match in enumerate(
+
+        pattern.finditer(text),
+
+        start=1,
+
+    ):
+
+        language = match.group(1) or "text"
+
+        code = match.group(2).rstrip()
+
+        code_blocks.append(
+
+            {
+
+                "id": index,
+
+                "language": language,
+
+                "code": code,
+
+            }
+
+        )
+
+    return code_blocks
+
+
+# ======================================================
+# Extract Lists
+# ======================================================
+
+def extract_lists(
+    self,
+) -> List[str]:
+    """
+    Extract markdown list items.
+    """
+
+    text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"^\s*[-*+]\s+(.*)$",
+
+        re.MULTILINE,
+
+    )
+
+    return [
+
+        item.strip()
+
+        for item in pattern.findall(text)
+
+    ]
+
+
+# ======================================================
+# Extract Tables
+# ======================================================
+
+def extract_tables(
+    self,
+) -> List[str]:
+    """
+    Extract markdown tables.
+    """
+
+    text = self.read_markdown()
+
+    lines = text.splitlines()
+
+    tables = []
+
+    current_table = []
+
+    for line in lines:
+
+        if "|" in line:
+
+            current_table.append(line)
+
+        else:
+
+            if current_table:
+
+                tables.append(
+
+                    "\n".join(
+
+                        current_table
+
+                    )
+
+                )
+
+                current_table = []
+
+    if current_table:
+
+        tables.append(
+
+            "\n".join(
+
+                current_table
+
+            )
+
+        )
+
+    return tables
+
+
+# ======================================================
+# Extract Links
+# ======================================================
+
+def extract_links(
+    self,
+) -> List[Dict[str, str]]:
+    """
+    Extract markdown hyperlinks.
+    """
+
+    text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"\[(.*?)\]\((.*?)\)"
+
+    )
+
+    links = []
+
+    for title, url in pattern.findall(text):
+
+        links.append(
+
+            {
+
+                "text": title,
+
+                "url": url,
+
+            }
+
+        )
+
+    return links
+
+
+# ======================================================
+# Extract Images
+# ======================================================
+
+def extract_images(
+    self,
+) -> List[Dict[str, str]]:
+    """
+    Extract markdown images.
+    """
+
+    text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"!\[(.*?)\]\((.*?)\)"
+
+    )
+
+    images = []
+
+    for alt, path in pattern.findall(text):
+
+        images.append(
+
+            {
+
+                "alt": alt,
+
+                "path": path,
+
+            }
+
+        )
+
+    return images
+
+
+# ======================================================
+# Heading Count
+# ======================================================
+
+def heading_count(
+    self,
+) -> int:
+    """
+    Number of headings.
+    """
+
+    return len(
+
+        self.extract_headings()
+
+    )
+
+
+# ======================================================
+# Code Block Count
+# ======================================================
+
+def code_block_count(
+    self,
+) -> int:
+    """
+    Number of code blocks.
+    """
+
+    return len(
+
+        self.extract_code_blocks()
+
+    )
+
+
+# ======================================================
+# Link Count
+# ======================================================
+
+def link_count(
+    self,
+) -> int:
+    """
+    Number of hyperlinks.
+    """
+
+    return len(
+
+        self.extract_links()
+
+    )
+
+
+# ======================================================
+# Image Count
+# ======================================================
+
+def image_count(
+    self,
+) -> int:
+    """
+    Number of images.
+    """
+
+    return len(
+
+        self.extract_images()
+
+    )
+
+
+# ======================================================
+# Table Count
+# ======================================================
+
+def table_count(
+    self,
+) -> int:
+    """
+    Number of markdown tables.
+    """
+
+    return len(
+
+        self.extract_tables()
+
+    )
