@@ -427,3 +427,337 @@ class ImageLoader(BaseLoader):
             ")"
 
         )
+
+# ======================================================
+# OCR using Tesseract
+# ======================================================
+
+def extract_text(
+    self,
+) -> str:
+    """
+    Extract text using Tesseract OCR.
+    """
+
+    try:
+
+        import pytesseract
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install pytesseract."
+
+        )
+
+    image = self.open_image()
+
+    return pytesseract.image_to_string(
+
+        image
+
+    )
+
+
+# ======================================================
+# OCR using EasyOCR
+# ======================================================
+
+def easyocr_text(
+    self,
+    languages: Optional[list[str]] = None,
+) -> str:
+    """
+    OCR using EasyOCR.
+    """
+
+    try:
+
+        import easyocr
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install easyocr."
+
+        )
+
+    if languages is None:
+
+        languages = ["en"]
+
+    reader = easyocr.Reader(
+
+        languages,
+
+        gpu=False,
+
+    )
+
+    result = reader.readtext(
+
+        str(self.file_path),
+
+        detail=0,
+
+    )
+
+    return "\n".join(result)
+
+
+# ======================================================
+# Grayscale
+# ======================================================
+
+def grayscale(
+    self,
+) -> Image.Image:
+    """
+    Convert image to grayscale.
+    """
+
+    image = self.open_image()
+
+    return image.convert(
+
+        "L"
+
+    )
+
+
+# ======================================================
+# Resize
+# ======================================================
+
+def resize(
+    self,
+    width: int,
+    height: int,
+) -> Image.Image:
+    """
+    Resize image.
+    """
+
+    image = self.open_image()
+
+    return image.resize(
+
+        (
+
+            width,
+
+            height,
+
+        )
+
+    )
+
+
+# ======================================================
+# Rotate
+# ======================================================
+
+def rotate(
+    self,
+    angle: float,
+) -> Image.Image:
+    """
+    Rotate image.
+    """
+
+    image = self.open_image()
+
+    return image.rotate(
+
+        angle,
+
+        expand=True,
+
+    )
+
+
+# ======================================================
+# Crop
+# ======================================================
+
+def crop(
+    self,
+    left: int,
+    upper: int,
+    right: int,
+    lower: int,
+) -> Image.Image:
+    """
+    Crop image.
+    """
+
+    image = self.open_image()
+
+    return image.crop(
+
+        (
+
+            left,
+
+            upper,
+
+            right,
+
+            lower,
+
+        )
+
+    )
+
+
+# ======================================================
+# Thumbnail
+# ======================================================
+
+def thumbnail(
+    self,
+    size: tuple[int, int] = (256, 256),
+) -> Image.Image:
+    """
+    Generate thumbnail.
+    """
+
+    image = self.open_image().copy()
+
+    image.thumbnail(
+
+        size
+
+    )
+
+    return image
+
+
+# ======================================================
+# Gaussian Blur
+# ======================================================
+
+def blur(
+    self,
+    radius: float = 2.0,
+) -> Image.Image:
+    """
+    Apply Gaussian blur.
+    """
+
+    from PIL import ImageFilter
+
+    image = self.open_image()
+
+    return image.filter(
+
+        ImageFilter.GaussianBlur(
+
+            radius
+
+        )
+
+    )
+
+
+# ======================================================
+# Sharpen
+# ======================================================
+
+def sharpen(
+    self,
+) -> Image.Image:
+    """
+    Sharpen image.
+    """
+
+    from PIL import ImageFilter
+
+    image = self.open_image()
+
+    return image.filter(
+
+        ImageFilter.SHARPEN
+
+    )
+
+
+# ======================================================
+# Enhance Contrast
+# ======================================================
+
+def enhance_contrast(
+    self,
+    factor: float = 1.5,
+) -> Image.Image:
+    """
+    Increase image contrast.
+    """
+
+    from PIL import ImageEnhance
+
+    image = self.open_image()
+
+    enhancer = ImageEnhance.Contrast(
+
+        image
+
+    )
+
+    return enhancer.enhance(
+
+        factor
+
+    )
+
+
+# ======================================================
+# Preprocess for OCR
+# ======================================================
+
+def preprocess(
+    self,
+) -> Image.Image:
+    """
+    OCR preprocessing pipeline.
+    """
+
+    image = self.grayscale()
+
+    image = image.point(
+
+        lambda pixel:
+
+            255
+
+            if pixel > 160
+
+            else 0
+
+    )
+
+    return image
+
+
+# ======================================================
+# Save Image
+# ======================================================
+
+def save(
+    self,
+    image: Image.Image,
+    output_path: str,
+) -> str:
+    """
+    Save processed image.
+    """
+
+    image.save(
+
+        output_path
+
+    )
+
+    return output_path
