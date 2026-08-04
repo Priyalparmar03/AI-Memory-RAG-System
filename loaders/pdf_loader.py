@@ -800,3 +800,434 @@ def link_count(
         self.extract_links()
 
     )
+
+# ======================================================
+# Extract Images
+# ======================================================
+
+def extract_images(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract all images from PDF.
+    """
+
+    document = self.open_pdf()
+
+    images = []
+
+    image_id = 0
+
+    for page_number in range(
+        len(document)
+    ):
+
+        page = document[page_number]
+
+        image_list = page.get_images(
+            full=True
+        )
+
+        for image in image_list:
+
+            image_id += 1
+
+            xref = image[0]
+
+            pix = fitz.Pixmap(
+                document,
+                xref,
+            )
+
+            images.append(
+
+                {
+
+                    "image_id": image_id,
+
+                    "page": page_number + 1,
+
+                    "xref": xref,
+
+                    "width": pix.width,
+
+                    "height": pix.height,
+
+                    "colorspace": pix.colorspace.name
+                    if pix.colorspace
+                    else None,
+
+                }
+
+            )
+
+            pix = None
+
+    return images
+
+
+# ======================================================
+# Save Images
+# ======================================================
+
+def save_images(
+    self,
+    output_dir: str,
+) -> List[str]:
+    """
+    Save extracted images.
+    """
+
+    document = self.open_pdf()
+
+    output = Path(output_dir)
+
+    output.mkdir(
+
+        parents=True,
+
+        exist_ok=True,
+
+    )
+
+    saved = []
+
+    counter = 0
+
+    for page_number in range(
+        len(document)
+    ):
+
+        page = document[
+            page_number
+        ]
+
+        image_list = page.get_images(
+            full=True
+        )
+
+        for image in image_list:
+
+            counter += 1
+
+            xref = image[0]
+
+            pix = fitz.Pixmap(
+                document,
+                xref,
+            )
+
+            filename = (
+
+                output
+
+                /
+
+                f"page_{page_number+1}_"
+
+                f"image_{counter}.png"
+
+            )
+
+            if pix.n < 5:
+
+                pix.save(filename)
+
+            else:
+
+                rgb = fitz.Pixmap(
+                    fitz.csRGB,
+                    pix,
+                )
+
+                rgb.save(filename)
+
+                rgb = None
+
+            saved.append(
+
+                str(filename)
+
+            )
+
+            pix = None
+
+    return saved
+
+
+# ======================================================
+# Render Page
+# ======================================================
+
+def render_page(
+    self,
+    page_number: int,
+    zoom: float = 2.0,
+):
+    """
+    Render page as image.
+    """
+
+    document = self.open_pdf()
+
+    if (
+
+        page_number < 1
+
+        or
+
+        page_number > self.page_count
+
+    ):
+
+        raise LoaderError(
+
+            "Invalid page number."
+
+        )
+
+    page = document[
+        page_number - 1
+    ]
+
+    matrix = fitz.Matrix(
+
+        zoom,
+
+        zoom,
+
+    )
+
+    pixmap = page.get_pixmap(
+
+        matrix=matrix
+
+    )
+
+    return pixmap
+
+
+# ======================================================
+# Save Rendered Page
+# ======================================================
+
+def save_page(
+    self,
+    page_number: int,
+    output_path: str,
+    zoom: float = 2.0,
+) -> str:
+    """
+    Save rendered page.
+    """
+
+    pix = self.render_page(
+
+        page_number,
+
+        zoom,
+
+    )
+
+    pix.save(
+
+        output_path
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# OCR Page
+# ======================================================
+
+def ocr_page(
+    self,
+    page_number: int,
+) -> str:
+    """
+    OCR one PDF page.
+    """
+
+    try:
+
+        import pytesseract
+
+        from PIL import Image
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install pytesseract "
+
+            "and pillow."
+
+        )
+
+    pix = self.render_page(
+        page_number
+    )
+
+    image = Image.frombytes(
+
+        "RGB",
+
+        [
+
+            pix.width,
+
+            pix.height,
+
+        ],
+
+        pix.samples,
+
+    )
+
+    return pytesseract.image_to_string(
+        image
+    )
+
+
+# ======================================================
+# OCR Entire Document
+# ======================================================
+
+def ocr_document(
+    self,
+) -> str:
+    """
+    OCR every page.
+    """
+
+    text = []
+
+    for page in range(
+
+        1,
+
+        self.page_count + 1,
+
+    ):
+
+        text.append(
+
+            self.ocr_page(
+                page
+            )
+
+        )
+
+    return "\n".join(text)
+
+
+# ======================================================
+# Thumbnail
+# ======================================================
+
+def thumbnail(
+    self,
+    page_number: int = 1,
+    width: int = 250,
+):
+    """
+    Generate page thumbnail.
+    """
+
+    document = self.open_pdf()
+
+    page = document[
+        page_number - 1
+    ]
+
+    scale = (
+
+        width
+
+        /
+
+        page.rect.width
+
+    )
+
+    matrix = fitz.Matrix(
+
+        scale,
+
+        scale,
+
+    )
+
+    return page.get_pixmap(
+
+        matrix=matrix
+
+    )
+
+
+# ======================================================
+# Save Thumbnail
+# ======================================================
+
+def save_thumbnail(
+    self,
+    output_path: str,
+    page_number: int = 1,
+) -> str:
+    """
+    Save thumbnail.
+    """
+
+    thumb = self.thumbnail(
+
+        page_number
+
+    )
+
+    thumb.save(
+
+        output_path
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# Image Count
+# ======================================================
+
+def image_count(
+    self,
+) -> int:
+    """
+    Number of images.
+    """
+
+    return len(
+
+        self.extract_images()
+
+    )
+
+
+# ======================================================
+# Is Scanned PDF
+# ======================================================
+
+def is_scanned(
+    self,
+) -> bool:
+    """
+    Detect scanned PDF.
+    """
+
+    text = self.extract_text()
+
+    return len(
+
+        text.strip()
+
+    ) == 0
