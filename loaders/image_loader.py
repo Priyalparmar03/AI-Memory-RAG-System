@@ -1294,3 +1294,450 @@ def analyze(
             self.extract_exif(),
 
     }
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Image diagnostics.
+    """
+
+    return {
+
+        "loader":
+
+            self.__class__.__name__,
+
+        "file":
+
+            self.file_name,
+
+        "extension":
+
+            self.extension,
+
+        "mime_type":
+
+            self.mime_type,
+
+        "file_size":
+
+            self.file_size,
+
+        "dimensions":
+
+            (
+
+                self.width,
+
+                self.height,
+
+            ),
+
+        "channels":
+
+            self.channels,
+
+        "format":
+
+            self.image_format,
+
+        "mode":
+
+            self.color_mode,
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark image loading.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    image = self.to_numpy()
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    pixels = (
+
+        self.width
+
+        *
+
+        self.height
+
+    )
+
+    return {
+
+        "execution_time":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "pixels_per_second":
+
+            round(
+
+                pixels
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "megapixels":
+
+            round(
+
+                pixels
+
+                /
+
+                1_000_000,
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Validate Image
+# ======================================================
+
+def validate(
+    self,
+) -> bool:
+    """
+    Validate image integrity.
+    """
+
+    try:
+
+        image = Image.open(
+
+            self.file_path
+
+        )
+
+        image.verify()
+
+        return True
+
+    except Exception:
+
+        return False
+
+
+# ======================================================
+# Reload
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload image.
+    """
+
+    self.close_image()
+
+    self.open_image()
+
+
+# ======================================================
+# Export NumPy
+# ======================================================
+
+def export_numpy(
+    self,
+    output_path: str,
+) -> str:
+    """
+    Save image array.
+    """
+
+    array = self.to_numpy()
+
+    np.save(
+
+        output_path,
+
+        array,
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# Export Metadata
+# ======================================================
+
+def export_metadata(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export metadata.
+    """
+
+    metadata = self.metadata()
+
+    metadata.update(
+
+        self.image_metadata()
+
+    )
+
+    metadata.update(
+
+        self.statistics()
+
+    )
+
+    metadata["exif"] = (
+
+        self.extract_exif()
+
+    )
+
+    return metadata
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "file":
+
+            self.file_name,
+
+        "width":
+
+            self.width,
+
+        "height":
+
+            self.height,
+
+        "channels":
+
+            self.channels,
+
+        "format":
+
+            self.image_format,
+
+        "brightness":
+
+            self.brightness(),
+
+        "contrast":
+
+            self.contrast(),
+
+        "faces":
+
+            self.face_detection()[
+
+                "count"
+
+            ],
+
+        "blurry":
+
+            self.blur_detection()[
+
+                "is_blurry"
+
+            ],
+
+        "pixels":
+
+            stats["pixels"],
+
+    }
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Release resources.
+    """
+
+    self.close_image()
+
+    logger.info(
+
+        "Image resources released."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    self.open_image()
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return (
+
+        self.width
+
+        *
+
+        self.height
+
+    )
+
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over rows.
+    """
+
+    image = self.to_numpy()
+
+    return iter(
+
+        image
+
+    )
+
+
+def __getitem__(
+    self,
+    index,
+):
+    """
+    Access image row.
+    """
+
+    image = self.to_numpy()
+
+    return image[index]
+
+
+def __contains__(
+    self,
+    value,
+):
+    """
+    Check pixel value.
+    """
+
+    image = self.to_numpy()
+
+    return (
+
+        value
+
+        in
+
+        image
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    return (
+
+        "ImageLoader("
+
+        f"file='{self.file_name}', "
+
+        f"size={self.width}x{self.height}, "
+
+        f"mode='{self.color_mode}'"
+
+        ")"
+
+    )
