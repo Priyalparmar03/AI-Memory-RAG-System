@@ -785,3 +785,333 @@ def null_row_count(
         ).sum()
 
     )
+
+# ======================================================
+# Describe Dataset
+# ======================================================
+
+def describe(
+    self,
+) -> pd.DataFrame:
+    """
+    Statistical summary.
+    """
+
+    return self.read_csv().describe(
+
+        include="all"
+
+    )
+
+
+# ======================================================
+# Correlation Matrix
+# ======================================================
+
+def correlation(
+    self,
+    method: str = "pearson",
+) -> pd.DataFrame:
+    """
+    Compute correlation matrix.
+    """
+
+    dataframe = self.read_csv()
+
+    numeric = dataframe.select_dtypes(
+
+        include="number"
+
+    )
+
+    if numeric.empty:
+
+        raise LoaderError(
+
+            "No numeric columns found."
+
+        )
+
+    return numeric.corr(
+
+        method=method
+
+    )
+
+
+# ======================================================
+# Value Counts
+# ======================================================
+
+def value_counts(
+    self,
+    column: str,
+    normalize: bool = False,
+) -> pd.Series:
+    """
+    Frequency count for a column.
+    """
+
+    dataframe = self.read_csv()
+
+    if column not in dataframe.columns:
+
+        raise LoaderError(
+
+            f"Column '{column}' not found."
+
+        )
+
+    return dataframe[
+
+        column
+
+    ].value_counts(
+
+        normalize=normalize,
+
+        dropna=False,
+
+    )
+
+
+# ======================================================
+# Export JSON
+# ======================================================
+
+def export_json(
+    self,
+    output_path: str,
+    orient: str = "records",
+) -> str:
+    """
+    Export CSV as JSON.
+    """
+
+    dataframe = self.read_csv()
+
+    dataframe.to_json(
+
+        output_path,
+
+        orient=orient,
+
+        indent=4,
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# Export Dictionary
+# ======================================================
+
+def export_dict(
+    self,
+    orient: str = "records",
+) -> Any:
+    """
+    Export CSV as dictionary.
+    """
+
+    dataframe = self.read_csv()
+
+    return dataframe.to_dict(
+
+        orient=orient,
+
+    )
+
+
+# ======================================================
+# Preview Columns
+# ======================================================
+
+def preview_columns(
+    self,
+    columns: List[str],
+    rows: int = 5,
+) -> pd.DataFrame:
+    """
+    Preview selected columns.
+    """
+
+    dataframe = self.read_csv()
+
+    missing = [
+
+        column
+
+        for column
+
+        in columns
+
+        if column not in dataframe.columns
+
+    ]
+
+    if missing:
+
+        raise LoaderError(
+
+            f"Columns not found: {missing}"
+
+        )
+
+    return dataframe[
+
+        columns
+
+    ].head(
+
+        rows
+
+    )
+
+
+# ======================================================
+# Dataset Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable dataset summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "file":
+
+            self.file_name,
+
+        "rows":
+
+            stats["rows"],
+
+        "columns":
+
+            stats["columns"],
+
+        "numeric_columns":
+
+            stats["numeric_columns"],
+
+        "categorical_columns":
+
+            stats["categorical_columns"],
+
+        "memory_usage":
+
+            stats["memory_usage"],
+
+        "duplicates":
+
+            self.duplicates()[
+
+                "duplicate_rows"
+
+            ],
+
+        "null_rows":
+
+            self.null_row_count(),
+
+    }
+
+
+# ======================================================
+# Export Summary
+# ======================================================
+
+def export_summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete dataset summary.
+    """
+
+    return {
+
+        "metadata":
+
+            self.csv_metadata(),
+
+        "schema":
+
+            self.schema(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "missing_values":
+
+            self.missing_values(),
+
+        "duplicates":
+
+            self.duplicates(),
+
+        "summary":
+
+            self.summary(),
+
+    }
+
+
+# ======================================================
+# Top Rows
+# ======================================================
+
+def head(
+    self,
+    rows: int = 5,
+) -> pd.DataFrame:
+    """
+    Return first rows.
+    """
+
+    return self.read_csv().head(
+
+        rows
+
+    )
+
+
+# ======================================================
+# Bottom Rows
+# ======================================================
+
+def tail(
+    self,
+    rows: int = 5,
+) -> pd.DataFrame:
+    """
+    Return last rows.
+    """
+
+    return self.read_csv().tail(
+
+        rows
+
+    )
+
+
+# ======================================================
+# Shape
+# ======================================================
+
+@property
+def shape(
+    self,
+) -> tuple[int, int]:
+    """
+    Dataset shape.
+    """
+
+    return self.read_csv().shape
