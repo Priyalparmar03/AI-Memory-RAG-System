@@ -374,3 +374,377 @@ class DOCXLoader(BaseLoader):
             ")"
 
         )
+
+# ======================================================
+# Extract Headings
+# ======================================================
+
+def extract_headings(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract document headings.
+    """
+
+    document = self.open_document()
+
+    headings = []
+
+    for paragraph in document.paragraphs:
+
+        style = paragraph.style.name
+
+        if style.startswith("Heading"):
+
+            try:
+
+                level = int(
+
+                    style.split()[-1]
+
+                )
+
+            except Exception:
+
+                level = 1
+
+            headings.append(
+
+                {
+
+                    "level": level,
+
+                    "text": paragraph.text,
+
+                    "style": style,
+
+                }
+
+            )
+
+    return headings
+
+
+# ======================================================
+# Extract Tables
+# ======================================================
+
+def extract_tables(
+    self,
+) -> List[List[List[str]]]:
+    """
+    Extract all tables.
+    """
+
+    document = self.open_document()
+
+    tables = []
+
+    for table in document.tables:
+
+        rows = []
+
+        for row in table.rows:
+
+            rows.append(
+
+                [
+
+                    cell.text.strip()
+
+                    for cell
+
+                    in row.cells
+
+                ]
+
+            )
+
+        tables.append(
+
+            rows
+
+        )
+
+    return tables
+
+
+# ======================================================
+# Extract Images
+# ======================================================
+
+def extract_images(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract image metadata.
+    """
+
+    document = self.open_document()
+
+    images = []
+
+    relationships = document.part.rels
+
+    image_number = 0
+
+    for rel in relationships.values():
+
+        if "image" in rel.target_ref:
+
+            image_number += 1
+
+            images.append(
+
+                {
+
+                    "id": image_number,
+
+                    "name":
+
+                        Path(
+
+                            rel.target_ref
+
+                        ).name,
+
+                    "path":
+
+                        rel.target_ref,
+
+                }
+
+            )
+
+    return images
+
+
+# ======================================================
+# Extract Hyperlinks
+# ======================================================
+
+def extract_hyperlinks(
+    self,
+) -> List[Dict[str, str]]:
+    """
+    Extract hyperlinks.
+    """
+
+    document = self.open_document()
+
+    links = []
+
+    relationships = document.part.rels
+
+    for rel in relationships.values():
+
+        if (
+
+            "hyperlink"
+
+            in rel.reltype
+
+        ):
+
+            links.append(
+
+                {
+
+                    "url":
+
+                        rel.target_ref,
+
+                }
+
+            )
+
+    return links
+
+
+# ======================================================
+# Extract Headers
+# ======================================================
+
+def extract_headers(
+    self,
+) -> List[str]:
+    """
+    Extract document headers.
+    """
+
+    document = self.open_document()
+
+    headers = []
+
+    for section in document.sections:
+
+        header = section.header
+
+        for paragraph in header.paragraphs:
+
+            if paragraph.text.strip():
+
+                headers.append(
+
+                    paragraph.text
+
+                )
+
+    return headers
+
+
+# ======================================================
+# Extract Footers
+# ======================================================
+
+def extract_footers(
+    self,
+) -> List[str]:
+    """
+    Extract document footers.
+    """
+
+    document = self.open_document()
+
+    footers = []
+
+    for section in document.sections:
+
+        footer = section.footer
+
+        for paragraph in footer.paragraphs:
+
+            if paragraph.text.strip():
+
+                footers.append(
+
+                    paragraph.text
+
+                )
+
+    return footers
+
+
+# ======================================================
+# Search Text
+# ======================================================
+
+def search(
+    self,
+    keyword: str,
+) -> List[Dict[str, Any]]:
+    """
+    Search document.
+    """
+
+    keyword = keyword.lower()
+
+    results = []
+
+    for index, paragraph in enumerate(
+
+        self.paragraphs(),
+
+        start=1,
+
+    ):
+
+        if (
+
+            keyword
+
+            in
+
+            paragraph.lower()
+
+        ):
+
+            results.append(
+
+                {
+
+                    "paragraph":
+
+                        index,
+
+                    "text":
+
+                        paragraph,
+
+                }
+
+            )
+
+    return results
+
+
+# ======================================================
+# Heading Count
+# ======================================================
+
+def heading_count(
+    self,
+) -> int:
+    """
+    Number of headings.
+    """
+
+    return len(
+
+        self.extract_headings()
+
+    )
+
+
+# ======================================================
+# Table Count
+# ======================================================
+
+def table_count(
+    self,
+) -> int:
+    """
+    Number of tables.
+    """
+
+    return len(
+
+        self.extract_tables()
+
+    )
+
+
+# ======================================================
+# Image Count
+# ======================================================
+
+def image_count(
+    self,
+) -> int:
+    """
+    Number of embedded images.
+    """
+
+    return len(
+
+        self.extract_images()
+
+    )
+
+
+# ======================================================
+# Hyperlink Count
+# ======================================================
+
+def hyperlink_count(
+    self,
+) -> int:
+    """
+    Number of hyperlinks.
+    """
+
+    return len(
+
+        self.extract_hyperlinks()
+
+    )
