@@ -1515,3 +1515,328 @@ def export_structure(
             self.statistics(),
 
     }
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Loader diagnostics.
+    """
+
+    return {
+
+        "loader":
+
+            self.__class__.__name__,
+
+        "file":
+
+            self.file_name,
+
+        "extension":
+
+            self.extension,
+
+        "mime_type":
+
+            self.mime_type,
+
+        "file_size":
+
+            self.file_size,
+
+        "is_empty":
+
+            self.is_empty(),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark markdown loading.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    text = self.extract_text()
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    return {
+
+        "execution_time":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "characters_per_second":
+
+            round(
+
+                len(text)
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "words_per_second":
+
+            round(
+
+                len(
+
+                    text.split()
+
+                )
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Validate Markdown
+# ======================================================
+
+def validate(
+    self,
+) -> bool:
+    """
+    Validate markdown file.
+    """
+
+    try:
+
+        self.read_markdown()
+
+        return True
+
+    except Exception:
+
+        return False
+
+
+# ======================================================
+# Reload
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload markdown document.
+    """
+
+    logger.info(
+
+        "Reloading markdown file."
+
+    )
+
+    self.read_markdown()
+
+
+# ======================================================
+# Export Plain Text
+# ======================================================
+
+def export_text(
+    self,
+    output_path: str,
+) -> str:
+    """
+    Export plain text.
+    """
+
+    text = self.extract_text()
+
+    with open(
+
+        output_path,
+
+        "w",
+
+        encoding="utf-8",
+
+    ) as file:
+
+        file.write(
+
+            text
+
+        )
+
+    return output_path
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup loader.
+    """
+
+    logger.info(
+
+        "Markdown loader cleaned."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return len(
+
+        self.read_markdown()
+
+    )
+
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over markdown sections.
+    """
+
+    return iter(
+
+        self.extract_sections()
+
+    )
+
+
+def __getitem__(
+    self,
+    index: int,
+):
+    """
+    Get section by index.
+    """
+
+    sections = self.extract_sections()
+
+    return sections[index]
+
+
+def __contains__(
+    self,
+    keyword: str,
+):
+    """
+    Check if keyword exists.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.read_markdown().lower()
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    stats = self.statistics()
+
+    return (
+
+        "MarkdownLoader("
+
+        f"file='{self.file_name}', "
+
+        f"sections={stats['sections']}, "
+
+        f"headings={stats['headings']}"
+
+        ")"
+
+    )
