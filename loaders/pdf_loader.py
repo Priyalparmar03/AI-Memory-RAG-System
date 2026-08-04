@@ -1231,3 +1231,380 @@ def is_scanned(
         text.strip()
 
     ) == 0
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    PDF statistics.
+    """
+
+    text = self.extract_text()
+
+    return {
+
+        "pages":
+
+            self.page_count,
+
+        "characters":
+
+            len(text),
+
+        "words":
+
+            len(text.split()),
+
+        "lines":
+
+            len(text.splitlines()),
+
+        "images":
+
+            self.image_count(),
+
+        "tables":
+
+            self.table_count(),
+
+        "links":
+
+            self.link_count(),
+
+        "is_scanned":
+
+            self.is_scanned(),
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    PDF diagnostics.
+    """
+
+    return {
+
+        "loader":
+
+            self.__class__.__name__,
+
+        "file":
+
+            self.file_name,
+
+        "extension":
+
+            self.extension,
+
+        "mime_type":
+
+            self.mime_type,
+
+        "size":
+
+            self.file_size,
+
+        "pages":
+
+            self.page_count,
+
+        "encrypted":
+
+            self.document_info().get(
+
+                "encrypted",
+
+                False,
+
+            ),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark extraction speed.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    text = self.extract_text()
+
+    elapsed = (
+
+        time.perf_counter()
+
+        - start
+
+    )
+
+    return {
+
+        "seconds":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "pages_per_second":
+
+            round(
+
+                self.page_count
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "words_per_second":
+
+            round(
+
+                len(text.split())
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Reload
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload PDF.
+    """
+
+    self.close_pdf()
+
+    self.open_pdf()
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup resources.
+    """
+
+    self.close_pdf()
+
+    logger.info(
+
+        "PDF resources released."
+
+    )
+
+
+# ======================================================
+# File Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    metadata = self.document_info()
+
+    stats = self.statistics()
+
+    return {
+
+        "file":
+
+            self.file_name,
+
+        "title":
+
+            metadata.get("title"),
+
+        "author":
+
+            metadata.get("author"),
+
+        "pages":
+
+            stats["pages"],
+
+        "words":
+
+            stats["words"],
+
+        "tables":
+
+            stats["tables"],
+
+        "images":
+
+            stats["images"],
+
+        "links":
+
+            stats["links"],
+
+        "scanned":
+
+            stats["is_scanned"],
+
+    }
+
+
+# ======================================================
+# Export Metadata
+# ======================================================
+
+def export_metadata(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete metadata.
+    """
+
+    metadata = self.metadata()
+
+    metadata.update(
+
+        self.document_info()
+
+    )
+
+    metadata.update(
+
+        self.statistics()
+
+    )
+
+    return metadata
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    self.open_pdf()
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+
+    return self.page_count
+
+
+def __iter__(
+    self,
+):
+
+    for page in self.extract_pages():
+
+        yield page
+
+
+def __getitem__(
+    self,
+    index: int,
+):
+
+    return self.extract_page(
+
+        index + 1
+
+    )
+
+
+def __repr__(
+    self,
+):
+
+    return (
+
+        "PDFLoader("
+
+        f"file='{self.file_name}', "
+
+        f"pages={self.page_count}, "
+
+        f"size={self.file_size} bytes"
+
+        ")"
+
+    )
