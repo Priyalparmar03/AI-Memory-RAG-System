@@ -761,3 +761,536 @@ def save(
     )
 
     return output_path
+
+# ======================================================
+# Extract EXIF Metadata
+# ======================================================
+
+def extract_exif(
+    self,
+) -> Dict[str, Any]:
+    """
+    Extract EXIF metadata.
+    """
+
+    from PIL.ExifTags import TAGS
+
+    image = self.open_image()
+
+    exif = image.getexif()
+
+    if not exif:
+
+        return {}
+
+    metadata = {}
+
+    for tag_id, value in exif.items():
+
+        tag = TAGS.get(
+
+            tag_id,
+
+            tag_id,
+
+        )
+
+        metadata[tag] = value
+
+    return metadata
+
+
+# ======================================================
+# Histogram
+# ======================================================
+
+def histogram(
+    self,
+) -> list[int]:
+    """
+    Image histogram.
+    """
+
+    image = self.open_image()
+
+    return image.histogram()
+
+
+# ======================================================
+# Dominant Color
+# ======================================================
+
+def dominant_color(
+    self,
+) -> tuple[int, int, int]:
+    """
+    Compute dominant RGB color.
+    """
+
+    image = self.open_image()
+
+    image = image.convert(
+
+        "RGB"
+
+    )
+
+    image = image.resize(
+
+        (
+
+            150,
+
+            150,
+
+        )
+
+    )
+
+    pixels = np.array(
+
+        image
+
+    ).reshape(
+
+        -1,
+
+        3,
+
+    )
+
+    unique, counts = np.unique(
+
+        pixels,
+
+        axis=0,
+
+        return_counts=True,
+
+    )
+
+    dominant = unique[
+
+        np.argmax(
+
+            counts
+
+        )
+
+    ]
+
+    return tuple(
+
+        int(v)
+
+        for v in dominant
+
+    )
+
+
+# ======================================================
+# Average Color
+# ======================================================
+
+def average_color(
+    self,
+) -> tuple[int, int, int]:
+    """
+    Compute average RGB color.
+    """
+
+    image = self.open_image()
+
+    image = image.convert(
+
+        "RGB"
+
+    )
+
+    pixels = np.asarray(
+
+        image
+
+    )
+
+    avg = pixels.mean(
+
+        axis=(0, 1)
+
+    )
+
+    return tuple(
+
+        int(v)
+
+        for v in avg
+
+    )
+
+
+# ======================================================
+# Brightness
+# ======================================================
+
+def brightness(
+    self,
+) -> float:
+    """
+    Average brightness.
+    """
+
+    gray = np.asarray(
+
+        self.grayscale()
+
+    )
+
+    return round(
+
+        float(
+
+            gray.mean()
+
+        ),
+
+        2,
+
+    )
+
+
+# ======================================================
+# Contrast
+# ======================================================
+
+def contrast(
+    self,
+) -> float:
+    """
+    Image contrast.
+    """
+
+    gray = np.asarray(
+
+        self.grayscale()
+
+    )
+
+    return round(
+
+        float(
+
+            gray.std()
+
+        ),
+
+        2,
+
+    )
+
+
+# ======================================================
+# Blur Detection
+# ======================================================
+
+def blur_detection(
+    self,
+    threshold: float = 100.0,
+) -> Dict[str, Any]:
+    """
+    Detect blurry image using
+    Laplacian variance.
+    """
+
+    try:
+
+        import cv2
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install opencv-python."
+
+        )
+
+    image = cv2.imread(
+
+        str(
+
+            self.file_path
+
+        )
+
+    )
+
+    gray = cv2.cvtColor(
+
+        image,
+
+        cv2.COLOR_BGR2GRAY,
+
+    )
+
+    variance = cv2.Laplacian(
+
+        gray,
+
+        cv2.CV_64F,
+
+    ).var()
+
+    return {
+
+        "variance":
+
+            round(
+
+                float(
+
+                    variance
+
+                ),
+
+                2,
+
+            ),
+
+        "is_blurry":
+
+            variance < threshold,
+
+    }
+
+
+# ======================================================
+# Face Detection
+# ======================================================
+
+def face_detection(
+    self,
+) -> Dict[str, Any]:
+    """
+    Detect faces using
+    OpenCV Haar Cascade.
+    """
+
+    try:
+
+        import cv2
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install opencv-python."
+
+        )
+
+    image = cv2.imread(
+
+        str(
+
+            self.file_path
+
+        )
+
+    )
+
+    gray = cv2.cvtColor(
+
+        image,
+
+        cv2.COLOR_BGR2GRAY,
+
+    )
+
+    detector = cv2.CascadeClassifier(
+
+        cv2.data.haarcascades
+
+        +
+
+        "haarcascade_frontalface_default.xml"
+
+    )
+
+    faces = detector.detectMultiScale(
+
+        gray,
+
+        scaleFactor=1.1,
+
+        minNeighbors=5,
+
+    )
+
+    return {
+
+        "count":
+
+            len(
+
+                faces
+
+            ),
+
+        "faces":
+
+            [
+
+                {
+
+                    "x": int(x),
+
+                    "y": int(y),
+
+                    "width": int(w),
+
+                    "height": int(h),
+
+                }
+
+                for (
+
+                    x,
+
+                    y,
+
+                    w,
+
+                    h,
+
+                )
+
+                in faces
+
+            ],
+
+    }
+
+
+# ======================================================
+# Edge Detection
+# ======================================================
+
+def edge_detection(
+    self,
+):
+    """
+    Detect edges using Canny.
+    """
+
+    try:
+
+        import cv2
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install opencv-python."
+
+        )
+
+    image = cv2.imread(
+
+        str(
+
+            self.file_path
+
+        )
+
+    )
+
+    gray = cv2.cvtColor(
+
+        image,
+
+        cv2.COLOR_BGR2GRAY,
+
+    )
+
+    return cv2.Canny(
+
+        gray,
+
+        100,
+
+        200,
+
+    )
+
+
+# ======================================================
+# Save Current Image
+# ======================================================
+
+def save_image(
+    self,
+    output_path: str,
+) -> str:
+    """
+    Save current image.
+    """
+
+    image = self.open_image()
+
+    image.save(
+
+        output_path
+
+    )
+
+    return output_path
+
+
+# ======================================================
+# Image Analysis
+# ======================================================
+
+def analyze(
+    self,
+) -> Dict[str, Any]:
+    """
+    Comprehensive image analysis.
+    """
+
+    return {
+
+        "metadata":
+
+            self.image_metadata(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "brightness":
+
+            self.brightness(),
+
+        "contrast":
+
+            self.contrast(),
+
+        "dominant_color":
+
+            self.dominant_color(),
+
+        "average_color":
+
+            self.average_color(),
+
+        "blur":
+
+            self.blur_detection(),
+
+        "faces":
+
+            self.face_detection(),
+
+        "exif":
+
+            self.extract_exif(),
+
+    }
