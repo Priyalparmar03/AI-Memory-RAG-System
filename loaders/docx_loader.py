@@ -1209,3 +1209,370 @@ def export_structure(
             self.statistics(),
 
     }
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Document diagnostics.
+    """
+
+    return {
+
+        "loader":
+
+            self.__class__.__name__,
+
+        "file":
+
+            self.file_name,
+
+        "extension":
+
+            self.extension,
+
+        "mime_type":
+
+            self.mime_type,
+
+        "file_size":
+
+            self.file_size,
+
+        "is_empty":
+
+            self.is_empty(),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Benchmark
+# ======================================================
+
+def benchmark(
+    self,
+) -> Dict[str, Any]:
+    """
+    Benchmark document loading.
+    """
+
+    import time
+
+    start = time.perf_counter()
+
+    text = self.extract_text()
+
+    elapsed = (
+
+        time.perf_counter()
+
+        -
+
+        start
+
+    )
+
+    words = len(
+
+        text.split()
+
+    )
+
+    paragraphs = len(
+
+        self.paragraphs()
+
+    )
+
+    return {
+
+        "execution_time":
+
+            round(
+
+                elapsed,
+
+                4,
+
+            ),
+
+        "words_per_second":
+
+            round(
+
+                words
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+        "paragraphs_per_second":
+
+            round(
+
+                paragraphs
+
+                /
+
+                max(
+
+                    elapsed,
+
+                    1e-9,
+
+                ),
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Validate Document
+# ======================================================
+
+def validate(
+    self,
+) -> bool:
+    """
+    Validate DOCX document.
+    """
+
+    try:
+
+        self.open_document()
+
+        return True
+
+    except Exception:
+
+        return False
+
+
+# ======================================================
+# Reload
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload document.
+    """
+
+    self.close_document()
+
+    self.open_document()
+
+
+# ======================================================
+# Export Plain Text
+# ======================================================
+
+def export_text(
+    self,
+    output_path: str,
+) -> str:
+    """
+    Export document text.
+    """
+
+    with open(
+
+        output_path,
+
+        "w",
+
+        encoding="utf-8",
+
+    ) as file:
+
+        file.write(
+
+            self.extract_text()
+
+        )
+
+    return output_path
+
+
+# ======================================================
+# Export Metadata
+# ======================================================
+
+def export_metadata(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete metadata.
+    """
+
+    metadata = self.metadata()
+
+    metadata.update(
+
+        self.document_metadata()
+
+    )
+
+    metadata.update(
+
+        self.statistics()
+
+    )
+
+    return metadata
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup resources.
+    """
+
+    self.close_document()
+
+    logger.info(
+
+        "DOCX resources released."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+
+    self.open_document()
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+
+    self.cleanup()
+
+
+# ======================================================
+# Python Protocols
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of paragraphs.
+    """
+
+    return len(
+
+        self.paragraphs()
+
+    )
+
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over paragraphs.
+    """
+
+    return iter(
+
+        self.paragraphs()
+
+    )
+
+
+def __getitem__(
+    self,
+    index: int,
+):
+    """
+    Get paragraph by index.
+    """
+
+    paragraphs = self.paragraphs()
+
+    return paragraphs[index]
+
+
+def __contains__(
+    self,
+    keyword: str,
+):
+    """
+    Check keyword existence.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.extract_text().lower()
+
+    )
+
+
+def __repr__(
+    self,
+):
+    """
+    String representation.
+    """
+
+    stats = self.statistics()
+
+    return (
+
+        "DOCXLoader("
+
+        f"file='{self.file_name}', "
+
+        f"paragraphs={stats['paragraphs']}, "
+
+        f"headings={stats['headings']}, "
+
+        f"tables={stats['tables']}"
+
+        ")"
+
+    )
