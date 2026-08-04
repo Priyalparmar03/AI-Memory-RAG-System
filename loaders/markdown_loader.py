@@ -1093,3 +1093,425 @@ def export_structure(
             self.extract_code_blocks(),
 
     }
+
+# ======================================================
+# Extract Frontmatter
+# ======================================================
+
+def extract_frontmatter(
+    self,
+) -> Dict[str, Any]:
+    """
+    Extract YAML frontmatter.
+    """
+
+    try:
+
+        import yaml
+
+    except ImportError:
+
+        raise LoaderError(
+
+            "Install PyYAML."
+
+        )
+
+    text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"^---\n(.*?)\n---",
+
+        re.DOTALL,
+
+    )
+
+    match = pattern.search(text)
+
+    if not match:
+
+        return {}
+
+    try:
+
+        return yaml.safe_load(
+
+            match.group(1)
+
+        ) or {}
+
+    except Exception:
+
+        return {}
+
+
+# ======================================================
+# Extract Sections
+# ======================================================
+
+def extract_sections(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Split markdown into sections based on headings.
+    """
+
+    markdown_text = self.read_markdown()
+
+    pattern = re.compile(
+
+        r"^(#{1,6})\s+(.*)$",
+
+        re.MULTILINE,
+
+    )
+
+    matches = list(
+
+        pattern.finditer(
+
+            markdown_text
+
+        )
+
+    )
+
+    sections = []
+
+    if not matches:
+
+        return [
+
+            {
+
+                "heading": None,
+
+                "level": 0,
+
+                "content": markdown_text,
+
+            }
+
+        ]
+
+    for index, match in enumerate(matches):
+
+        start = match.end()
+
+        end = (
+
+            matches[index + 1].start()
+
+            if index + 1 < len(matches)
+
+            else len(markdown_text)
+
+        )
+
+        sections.append(
+
+            {
+
+                "heading":
+
+                    match.group(2).strip(),
+
+                "level":
+
+                    len(match.group(1)),
+
+                "content":
+
+                    markdown_text[start:end].strip(),
+
+            }
+
+        )
+
+    return sections
+
+
+# ======================================================
+# Search
+# ======================================================
+
+def search(
+    self,
+    keyword: str,
+) -> List[Dict[str, Any]]:
+    """
+    Search keyword inside markdown sections.
+    """
+
+    keyword = keyword.lower()
+
+    results = []
+
+    for section in self.extract_sections():
+
+        content = section["content"]
+
+        if keyword in content.lower():
+
+            results.append(
+
+                {
+
+                    "heading":
+
+                        section["heading"],
+
+                    "level":
+
+                        section["level"],
+
+                    "preview":
+
+                        content[:300],
+
+                }
+
+            )
+
+    return results
+
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Markdown statistics.
+    """
+
+    text = self.read_markdown()
+
+    return {
+
+        "characters":
+
+            len(text),
+
+        "words":
+
+            len(
+
+                text.split()
+
+            ),
+
+        "lines":
+
+            len(
+
+                text.splitlines()
+
+            ),
+
+        "headings":
+
+            self.heading_count(),
+
+        "sections":
+
+            len(
+
+                self.extract_sections()
+
+            ),
+
+        "tables":
+
+            self.table_count(),
+
+        "links":
+
+            self.link_count(),
+
+        "images":
+
+            self.image_count(),
+
+        "code_blocks":
+
+            self.code_block_count(),
+
+        "lists":
+
+            len(
+
+                self.extract_lists()
+
+            ),
+
+    }
+
+
+# ======================================================
+# Section Titles
+# ======================================================
+
+def section_titles(
+    self,
+) -> List[str]:
+    """
+    Return all section titles.
+    """
+
+    return [
+
+        section["heading"]
+
+        for section in self.extract_sections()
+
+        if section["heading"]
+
+    ]
+
+
+# ======================================================
+# Preview Section
+# ======================================================
+
+def preview_section(
+    self,
+    heading: str,
+    characters: int = 500,
+) -> str:
+    """
+    Preview one section.
+    """
+
+    for section in self.extract_sections():
+
+        if (
+
+            section["heading"]
+
+            and
+
+            section["heading"].lower()
+
+            ==
+
+            heading.lower()
+
+        ):
+
+            return section["content"][:characters]
+
+    return ""
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Markdown summary.
+    """
+
+    stats = self.statistics()
+
+    return {
+
+        "file":
+
+            self.file_name,
+
+        "sections":
+
+            stats["sections"],
+
+        "headings":
+
+            stats["headings"],
+
+        "tables":
+
+            stats["tables"],
+
+        "images":
+
+            stats["images"],
+
+        "links":
+
+            stats["links"],
+
+        "code_blocks":
+
+            stats["code_blocks"],
+
+        "lists":
+
+            stats["lists"],
+
+        "frontmatter":
+
+            bool(
+
+                self.extract_frontmatter()
+
+            ),
+
+    }
+
+
+# ======================================================
+# Export Structure
+# ======================================================
+
+def export_structure(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete markdown structure.
+    """
+
+    return {
+
+        "metadata":
+
+            self.markdown_metadata(),
+
+        "frontmatter":
+
+            self.extract_frontmatter(),
+
+        "headings":
+
+            self.extract_headings(),
+
+        "sections":
+
+            self.extract_sections(),
+
+        "tables":
+
+            self.extract_tables(),
+
+        "links":
+
+            self.extract_links(),
+
+        "images":
+
+            self.extract_images(),
+
+        "code_blocks":
+
+            self.extract_code_blocks(),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
