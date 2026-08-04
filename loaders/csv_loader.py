@@ -383,3 +383,405 @@ class CSVLoader(BaseLoader):
             ")"
 
         )
+
+# ======================================================
+# Column Names
+# ======================================================
+
+def column_names(
+    self,
+) -> List[str]:
+    """
+    Return all column names.
+    """
+
+    return list(
+
+        self.read_csv().columns
+
+    )
+
+
+# ======================================================
+# Numeric Columns
+# ======================================================
+
+def numeric_columns(
+    self,
+) -> List[str]:
+    """
+    Return numeric columns.
+    """
+
+    dataframe = self.read_csv()
+
+    return list(
+
+        dataframe.select_dtypes(
+
+            include="number"
+
+        ).columns
+
+    )
+
+
+# ======================================================
+# Categorical Columns
+# ======================================================
+
+def categorical_columns(
+    self,
+) -> List[str]:
+    """
+    Return categorical columns.
+    """
+
+    dataframe = self.read_csv()
+
+    return list(
+
+        dataframe.select_dtypes(
+
+            exclude="number"
+
+        ).columns
+
+    )
+
+
+# ======================================================
+# Missing Values
+# ======================================================
+
+def missing_values(
+    self,
+) -> Dict[str, Any]:
+    """
+    Missing value analysis.
+    """
+
+    dataframe = self.read_csv()
+
+    missing = dataframe.isnull().sum()
+
+    percentage = (
+
+        dataframe.isnull().mean()
+
+        * 100
+
+    )
+
+    return {
+
+        column: {
+
+            "count":
+
+                int(
+
+                    missing[column]
+
+                ),
+
+            "percentage":
+
+                round(
+
+                    float(
+
+                        percentage[column]
+
+                    ),
+
+                    2,
+
+                ),
+
+        }
+
+        for column
+
+        in dataframe.columns
+
+    }
+
+
+# ======================================================
+# Duplicate Rows
+# ======================================================
+
+def duplicates(
+    self,
+) -> Dict[str, Any]:
+    """
+    Duplicate row analysis.
+    """
+
+    dataframe = self.read_csv()
+
+    duplicate_rows = int(
+
+        dataframe.duplicated().sum()
+
+    )
+
+    return {
+
+        "duplicate_rows":
+
+            duplicate_rows,
+
+        "unique_rows":
+
+            self.row_count
+
+            -
+
+            duplicate_rows,
+
+    }
+
+
+# ======================================================
+# Sample Rows
+# ======================================================
+
+def sample(
+    self,
+    n: int = 5,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """
+    Random sample.
+    """
+
+    dataframe = self.read_csv()
+
+    n = min(
+
+        n,
+
+        len(dataframe),
+
+    )
+
+    return dataframe.sample(
+
+        n=n,
+
+        random_state=random_state,
+
+    )
+
+
+# ======================================================
+# Search
+# ======================================================
+
+def search(
+    self,
+    keyword: str,
+) -> pd.DataFrame:
+    """
+    Search keyword in CSV.
+    """
+
+    dataframe = self.read_csv()
+
+    keyword = str(
+
+        keyword
+
+    ).lower()
+
+    mask = dataframe.astype(
+
+        str
+
+    ).apply(
+
+        lambda column:
+
+            column.str.lower().str.contains(
+
+                keyword,
+
+                na=False,
+
+            )
+
+    ).any(
+
+        axis=1
+
+    )
+
+    return dataframe[mask]
+
+
+# ======================================================
+# Filter Rows
+# ======================================================
+
+def filter_rows(
+    self,
+    column: str,
+    value: Any,
+) -> pd.DataFrame:
+    """
+    Filter rows by value.
+    """
+
+    dataframe = self.read_csv()
+
+    if column not in dataframe.columns:
+
+        raise LoaderError(
+
+            f"Column '{column}' "
+
+            "not found."
+
+        )
+
+    return dataframe[
+
+        dataframe[column]
+
+        ==
+
+        value
+
+    ]
+
+
+# ======================================================
+# Unique Values
+# ======================================================
+
+def unique_values(
+    self,
+    column: str,
+) -> List[Any]:
+    """
+    Unique values in column.
+    """
+
+    dataframe = self.read_csv()
+
+    if column not in dataframe.columns:
+
+        raise LoaderError(
+
+            f"Column '{column}' "
+
+            "not found."
+
+        )
+
+    return dataframe[
+
+        column
+
+    ].dropna().unique().tolist()
+
+
+# ======================================================
+# Row by Index
+# ======================================================
+
+def row(
+    self,
+    index: int,
+) -> Dict[str, Any]:
+    """
+    Return row by index.
+    """
+
+    dataframe = self.read_csv()
+
+    if (
+
+        index < 0
+
+        or
+
+        index >= len(dataframe)
+
+    ):
+
+        raise LoaderError(
+
+            "Invalid row index."
+
+        )
+
+    return dataframe.iloc[
+
+        index
+
+    ].to_dict()
+
+
+# ======================================================
+# Column Values
+# ======================================================
+
+def column(
+    self,
+    column_name: str,
+) -> List[Any]:
+    """
+    Return column values.
+    """
+
+    dataframe = self.read_csv()
+
+    if (
+
+        column_name
+
+        not in dataframe.columns
+
+    ):
+
+        raise LoaderError(
+
+            f"Column '{column_name}' "
+
+            "not found."
+
+        )
+
+    return dataframe[
+
+        column_name
+
+    ].tolist()
+
+
+# ======================================================
+# Null Row Count
+# ======================================================
+
+def null_row_count(
+    self,
+) -> int:
+    """
+    Rows containing at least one
+    missing value.
+    """
+
+    dataframe = self.read_csv()
+
+    return int(
+
+        dataframe.isnull().any(
+
+            axis=1
+
+        ).sum()
+
+    )
