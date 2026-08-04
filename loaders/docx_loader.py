@@ -748,3 +748,464 @@ def hyperlink_count(
         self.extract_hyperlinks()
 
     )
+
+# ======================================================
+# Extract Sections
+# ======================================================
+
+def extract_sections(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract document sections.
+    """
+
+    document = self.open_document()
+
+    sections = []
+
+    for index, section in enumerate(
+
+        document.sections,
+
+        start=1,
+
+    ):
+
+        sections.append(
+
+            {
+
+                "section": index,
+
+                "start_type":
+
+                    str(
+
+                        section.start_type
+
+                    ),
+
+                "orientation":
+
+                    str(
+
+                        section.orientation
+
+                    ),
+
+                "page_width":
+
+                    section.page_width,
+
+                "page_height":
+
+                    section.page_height,
+
+                "left_margin":
+
+                    section.left_margin,
+
+                "right_margin":
+
+                    section.right_margin,
+
+                "top_margin":
+
+                    section.top_margin,
+
+                "bottom_margin":
+
+                    section.bottom_margin,
+
+            }
+
+        )
+
+    return sections
+
+
+# ======================================================
+# Extract Styles
+# ======================================================
+
+def extract_styles(
+    self,
+) -> List[str]:
+    """
+    Extract used paragraph styles.
+    """
+
+    document = self.open_document()
+
+    styles = set()
+
+    for paragraph in document.paragraphs:
+
+        if paragraph.style:
+
+            styles.add(
+
+                paragraph.style.name
+
+            )
+
+    return sorted(
+
+        list(styles)
+
+    )
+
+
+# ======================================================
+# Extract Comments
+# ======================================================
+
+def extract_comments(
+    self,
+) -> List[Dict[str, Any]]:
+    """
+    Extract comments.
+
+    NOTE:
+    python-docx currently has
+    limited support for comments.
+    """
+
+    logger.warning(
+
+        "Comment extraction "
+
+        "is not fully supported "
+
+        "by python-docx."
+
+    )
+
+    return []
+
+
+# ======================================================
+# Core Properties
+# ======================================================
+
+def extract_core_properties(
+    self,
+) -> Dict[str, Any]:
+    """
+    Extract document core properties.
+    """
+
+    props = (
+
+        self.open_document()
+
+        .core_properties
+
+    )
+
+    return {
+
+        "title":
+
+            props.title,
+
+        "author":
+
+            props.author,
+
+        "subject":
+
+            props.subject,
+
+        "category":
+
+            props.category,
+
+        "keywords":
+
+            props.keywords,
+
+        "language":
+
+            props.language,
+
+        "identifier":
+
+            props.identifier,
+
+        "revision":
+
+            props.revision,
+
+        "version":
+
+            props.version,
+
+        "created":
+
+            props.created,
+
+        "modified":
+
+            props.modified,
+
+        "last_modified_by":
+
+            props.last_modified_by,
+
+    }
+
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Advanced document statistics.
+    """
+
+    text = self.extract_text()
+
+    words = text.split()
+
+    paragraphs = self.paragraphs()
+
+    return {
+
+        "characters":
+
+            len(text),
+
+        "characters_no_spaces":
+
+            len(
+
+                text.replace(
+
+                    " ",
+
+                    "",
+
+                )
+
+            ),
+
+        "words":
+
+            len(words),
+
+        "lines":
+
+            len(
+
+                text.splitlines()
+
+            ),
+
+        "paragraphs":
+
+            len(paragraphs),
+
+        "headings":
+
+            self.heading_count(),
+
+        "tables":
+
+            self.table_count(),
+
+        "images":
+
+            self.image_count(),
+
+        "hyperlinks":
+
+            self.hyperlink_count(),
+
+        "sections":
+
+            len(
+
+                self.extract_sections()
+
+            ),
+
+        "styles":
+
+            len(
+
+                self.extract_styles()
+
+            ),
+
+    }
+
+
+# ======================================================
+# Preview Paragraph
+# ======================================================
+
+def preview_paragraph(
+    self,
+    index: int,
+    characters: int = 500,
+) -> str:
+    """
+    Preview one paragraph.
+    """
+
+    paragraphs = self.paragraphs()
+
+    if (
+
+        index < 0
+
+        or
+
+        index >= len(paragraphs)
+
+    ):
+
+        return ""
+
+    return paragraphs[
+
+        index
+
+    ][:characters]
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    metadata = self.document_metadata()
+
+    stats = self.statistics()
+
+    return {
+
+        "file":
+
+            self.file_name,
+
+        "title":
+
+            metadata.get(
+
+                "title"
+
+            ),
+
+        "author":
+
+            metadata.get(
+
+                "author"
+
+            ),
+
+        "paragraphs":
+
+            stats["paragraphs"],
+
+        "headings":
+
+            stats["headings"],
+
+        "tables":
+
+            stats["tables"],
+
+        "images":
+
+            stats["images"],
+
+        "hyperlinks":
+
+            stats["hyperlinks"],
+
+        "sections":
+
+            stats["sections"],
+
+        "words":
+
+            stats["words"],
+
+    }
+
+
+# ======================================================
+# Export Structure
+# ======================================================
+
+def export_structure(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export document structure.
+    """
+
+    return {
+
+        "metadata":
+
+            self.document_metadata(),
+
+        "core_properties":
+
+            self.extract_core_properties(),
+
+        "paragraphs":
+
+            self.paragraphs(),
+
+        "headings":
+
+            self.extract_headings(),
+
+        "tables":
+
+            self.extract_tables(),
+
+        "images":
+
+            self.extract_images(),
+
+        "hyperlinks":
+
+            self.extract_hyperlinks(),
+
+        "headers":
+
+            self.extract_headers(),
+
+        "footers":
+
+            self.extract_footers(),
+
+        "sections":
+
+            self.extract_sections(),
+
+        "styles":
+
+            self.extract_styles(),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
