@@ -453,3 +453,462 @@ class User:
                 self.is_superuser,
 
         }
+
+# ======================================================
+# Update Password
+# ======================================================
+
+def update_password(
+    self,
+    password_hash: str,
+) -> None:
+    """
+    Update password hash.
+    """
+
+    self.password_hash = password_hash
+
+    self.touch()
+
+
+# ======================================================
+# Login
+# ======================================================
+
+def login(
+    self,
+) -> None:
+    """
+    Record successful login.
+    """
+
+    self.last_login = datetime.utcnow()
+
+    self.login_count += 1
+
+    self.status = UserStatus.ACTIVE
+
+    self.touch()
+
+    logger.info(
+
+        f"{self.username} logged in."
+
+    )
+
+
+# ======================================================
+# Logout
+# ======================================================
+
+def logout(
+    self,
+) -> None:
+    """
+    Logout user.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"{self.username} logged out."
+
+    )
+
+
+# ======================================================
+# Verify Account
+# ======================================================
+
+def verify(
+    self,
+) -> None:
+    """
+    Verify user.
+    """
+
+    self.is_verified = True
+
+    self.touch()
+
+
+# ======================================================
+# Activate
+# ======================================================
+
+def activate(
+    self,
+) -> None:
+    """
+    Activate user.
+    """
+
+    self.status = UserStatus.ACTIVE
+
+    self.touch()
+
+
+# ======================================================
+# Deactivate
+# ======================================================
+
+def deactivate(
+    self,
+) -> None:
+    """
+    Deactivate user.
+    """
+
+    self.status = UserStatus.INACTIVE
+
+    self.touch()
+
+
+# ======================================================
+# Block User
+# ======================================================
+
+def block(
+    self,
+) -> None:
+    """
+    Block user.
+    """
+
+    self.status = UserStatus.BLOCKED
+
+    self.touch()
+
+
+# ======================================================
+# Delete User
+# ======================================================
+
+def delete(
+    self,
+) -> None:
+    """
+    Soft delete user.
+    """
+
+    self.status = UserStatus.DELETED
+
+    self.touch()
+
+
+# ======================================================
+# Role Check
+# ======================================================
+
+def has_role(
+    self,
+    role: UserRole,
+) -> bool:
+    """
+    Check user role.
+    """
+
+    return self.role == role
+
+
+# ======================================================
+# Permission Check
+# ======================================================
+
+def has_permission(
+    self,
+    permission: str,
+) -> bool:
+    """
+    Simple RBAC.
+    """
+
+    permissions = {
+
+        UserRole.ADMIN: {
+
+            "*",
+
+        },
+
+        UserRole.SYSTEM: {
+
+            "*",
+
+        },
+
+        UserRole.EDITOR: {
+
+            "read",
+
+            "write",
+
+            "update",
+
+        },
+
+        UserRole.USER: {
+
+            "read",
+
+            "write",
+
+        },
+
+        UserRole.VIEWER: {
+
+            "read",
+
+        },
+
+    }
+
+    allowed = permissions.get(
+
+        self.role,
+
+        set(),
+
+    )
+
+    return (
+
+        "*"
+
+        in allowed
+
+        or
+
+        permission
+
+        in allowed
+
+    )
+
+
+# ======================================================
+# Promote Role
+# ======================================================
+
+def promote(
+    self,
+    role: UserRole,
+) -> None:
+    """
+    Promote user role.
+    """
+
+    self.role = role
+
+    self.touch()
+
+
+# ======================================================
+# Update Preferences
+# ======================================================
+
+def update_preferences(
+    self,
+    **kwargs,
+) -> None:
+    """
+    Update preferences.
+    """
+
+    for key, value in kwargs.items():
+
+        if hasattr(
+
+            self.preferences,
+
+            key,
+
+        ):
+
+            setattr(
+
+                self.preferences,
+
+                key,
+
+                value,
+
+            )
+
+    self.touch()
+
+
+# ======================================================
+# Update Profile
+# ======================================================
+
+def update_profile(
+    self,
+    **kwargs,
+) -> None:
+    """
+    Update profile.
+    """
+
+    for key, value in kwargs.items():
+
+        if hasattr(
+
+            self.profile,
+
+            key,
+
+        ):
+
+            setattr(
+
+                self.profile,
+
+                key,
+
+                value,
+
+            )
+
+    self.touch()
+
+
+# ======================================================
+# Add Metadata
+# ======================================================
+
+def add_metadata(
+    self,
+    key: str,
+    value: Any,
+) -> None:
+    """
+    Add metadata entry.
+    """
+
+    self.metadata[key] = value
+
+    self.touch()
+
+
+# ======================================================
+# Remove Metadata
+# ======================================================
+
+def remove_metadata(
+    self,
+    key: str,
+) -> None:
+    """
+    Remove metadata entry.
+    """
+
+    self.metadata.pop(
+
+        key,
+
+        None,
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# User Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    User statistics.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "username":
+
+            self.username,
+
+        "role":
+
+            self.role.value,
+
+        "status":
+
+            self.status.value,
+
+        "verified":
+
+            self.is_verified,
+
+        "superuser":
+
+            self.is_superuser,
+
+        "login_count":
+
+            self.login_count,
+
+        "last_login":
+
+            self.last_login.isoformat()
+
+            if self.last_login
+
+            else None,
+
+        "member_since":
+
+            self.created_at.isoformat(),
+
+        "profile_completed":
+
+            bool(
+
+                self.profile.first_name
+
+                or
+
+                self.profile.last_name
+
+            ),
+
+        "metadata_entries":
+
+            len(
+
+                self.metadata
+
+            ),
+
+    }
+
+
+# ======================================================
+# Account Age
+# ======================================================
+
+@property
+def account_age_days(
+    self,
+) -> int:
+    """
+    Account age in days.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.created_at
+
+    ).days
