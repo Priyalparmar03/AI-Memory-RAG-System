@@ -1392,3 +1392,500 @@ def has_token_usage(
         is not None
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup message resources.
+    """
+
+    logger.info(
+
+        f"Cleaning Message "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Entering Message "
+
+        f"{self.id}"
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh timestamps.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"Message "
+
+        f"{self.id} refreshed."
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "Message":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Clear Content
+# ======================================================
+
+def clear_content(
+    self,
+) -> None:
+    """
+    Remove message content.
+    """
+
+    self.content = ""
+
+    self.edited = True
+
+    self.edited_at = (
+
+        datetime.utcnow()
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Is Empty
+# ======================================================
+
+@property
+def is_empty(
+    self,
+) -> bool:
+    """
+    Whether content is empty.
+    """
+
+    return (
+
+        len(
+
+            self.content.strip()
+
+        )
+
+        ==
+
+        0
+
+    )
+
+
+# ======================================================
+# Display Content
+# ======================================================
+
+@property
+def preview(
+    self,
+) -> str:
+    """
+    Return short preview.
+    """
+
+    if len(
+
+        self.content
+
+    ) <= 100:
+
+        return self.content
+
+    return (
+
+        self.content[:100]
+
+        + "..."
+
+    )
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "Message("
+
+        f"id='{self.id}', "
+
+        f"role='{self.role.value}', "
+
+        f"type='{self.message_type.value}', "
+
+        f"status='{self.status.value}'"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"[{self.role.value}] "
+
+        f"{self.preview}"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of characters.
+    """
+
+    return len(
+
+        self.content
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over words.
+    """
+
+    return iter(
+
+        self.content.split()
+
+    )
+
+
+# ======================================================
+# Get Item
+# ======================================================
+
+def __getitem__(
+    self,
+    index,
+):
+    """
+    Index into message content.
+    """
+
+    return self.content[
+
+        index
+
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    keyword: str,
+):
+    """
+    Keyword search.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.content.lower()
+
+    )
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare messages.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Message,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Message validity.
+    """
+
+    return (
+
+        self.status
+
+        !=
+
+        MessageStatus.DELETED
+
+    )
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_user(
+    self,
+) -> bool:
+    """
+    User message.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        MessageRole.USER
+
+    )
+
+
+@property
+def is_assistant(
+    self,
+) -> bool:
+    """
+    Assistant message.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        MessageRole.ASSISTANT
+
+    )
+
+
+@property
+def is_system(
+    self,
+) -> bool:
+    """
+    System message.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        MessageRole.SYSTEM
+
+    )
+
+
+@property
+def is_tool(
+    self,
+) -> bool:
+    """
+    Tool message.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        MessageRole.TOOL
+
+    )
+
+
+@property
+def is_deleted(
+    self,
+) -> bool:
+    """
+    Deleted message.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        MessageStatus.DELETED
+
+    )
+
+
+@property
+def has_parent(
+    self,
+) -> bool:
+    """
+    Whether message belongs
+    to a thread.
+    """
+
+    return (
+
+        self.parent_message_id
+
+        is not None
+
+    )
+
+
+@property
+def age_seconds(
+    self,
+) -> float:
+    """
+    Message age.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.created_at
+
+    ).total_seconds()
