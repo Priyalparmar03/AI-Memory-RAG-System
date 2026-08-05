@@ -827,3 +827,568 @@ def character_count(
         self.content
 
     )
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize message to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "Message":
+    """
+    Create Message from dictionary.
+    """
+
+    attachments = [
+
+        Attachment(
+
+            name=item["name"],
+
+            file_type=item["file_type"],
+
+            file_path=item["file_path"],
+
+            size=item.get(
+
+                "size",
+
+                0,
+
+            ),
+
+            mime_type=item.get(
+
+                "mime_type",
+
+                "",
+
+            ),
+
+            metadata=item.get(
+
+                "metadata",
+
+                {},
+
+            ),
+
+        )
+
+        for item
+
+        in data.get(
+
+            "attachments",
+
+            [],
+
+        )
+
+    ]
+
+    token_usage = None
+
+    if data.get(
+
+        "token_usage"
+
+    ):
+
+        token_usage = (
+
+            TokenUsage.from_dict(
+
+                data["token_usage"]
+
+            )
+
+        )
+
+    return cls(
+
+        role=MessageRole(
+
+            data["role"]
+
+        ),
+
+        content=data["content"],
+
+        message_type=MessageType(
+
+            data.get(
+
+                "message_type",
+
+                MessageType.TEXT,
+
+            )
+
+        ),
+
+        status=MessageStatus(
+
+            data.get(
+
+                "status",
+
+                MessageStatus.PENDING,
+
+            )
+
+        ),
+
+        attachments=attachments,
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        token_usage=token_usage,
+
+        parent_message_id=data.get(
+
+            "parent_message_id"
+
+        ),
+
+        thread_id=data.get(
+
+            "thread_id"
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        edited=data.get(
+
+            "edited",
+
+            False,
+
+        ),
+
+        edited_at=(
+
+            datetime.fromisoformat(
+
+                data["edited_at"]
+
+            )
+
+            if data.get(
+
+                "edited_at"
+
+            )
+
+            else None
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "Message":
+    """
+    Create Message from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "Message":
+    """
+    Deep copy message.
+    """
+
+    return Message.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "role":
+
+            self.role.value,
+
+        "status":
+
+            self.status.value,
+
+        "message_type":
+
+            self.message_type.value,
+
+        "words":
+
+            self.word_count,
+
+        "attachments":
+
+            self.attachment_count,
+
+        "edited":
+
+            self.edited,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Message diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "edited":
+
+            self.edited,
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete message.
+    """
+
+    return {
+
+        "message":
+
+            self.to_dict(),
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# Compare Messages
+# ======================================================
+
+def compare(
+    self,
+    other: "Message",
+) -> Dict[str, Any]:
+    """
+    Compare two messages.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Message,
+
+    ):
+
+        raise MessageError(
+
+            "Expected Message."
+
+        )
+
+    return {
+
+        "same_role":
+
+            self.role
+
+            ==
+
+            other.role,
+
+        "same_type":
+
+            self.message_type
+
+            ==
+
+            other.message_type,
+
+        "same_status":
+
+            self.status
+
+            ==
+
+            other.status,
+
+        "character_difference":
+
+            abs(
+
+                self.character_count
+
+                -
+
+                other.character_count
+
+            ),
+
+        "word_difference":
+
+            abs(
+
+                self.word_count
+
+                -
+
+                other.word_count
+
+            ),
+
+    }
+
+
+# ======================================================
+# Contains Keyword
+# ======================================================
+
+def contains(
+    self,
+    keyword: str,
+) -> bool:
+    """
+    Check whether message contains
+    a keyword.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.content.lower()
+
+    )
+
+
+# ======================================================
+# Starts With
+# ======================================================
+
+def starts_with(
+    self,
+    text: str,
+) -> bool:
+    """
+    Check prefix.
+    """
+
+    return self.content.startswith(
+
+        text
+
+    )
+
+
+# ======================================================
+# Ends With
+# ======================================================
+
+def ends_with(
+    self,
+    text: str,
+) -> bool:
+    """
+    Check suffix.
+    """
+
+    return self.content.endswith(
+
+        text
+
+    )
+
+
+# ======================================================
+# Is Reply
+# ======================================================
+
+@property
+def is_reply(
+    self,
+) -> bool:
+    """
+    Whether message has a parent.
+    """
+
+    return (
+
+        self.parent_message_id
+
+        is not None
+
+    )
+
+
+# ======================================================
+# Has Token Usage
+# ======================================================
+
+@property
+def has_token_usage(
+    self,
+) -> bool:
+    """
+    Whether token usage exists.
+    """
+
+    return (
+
+        self.token_usage
+
+        is not None
+
+    )
