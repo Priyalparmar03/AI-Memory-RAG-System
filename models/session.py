@@ -1004,3 +1004,559 @@ def messages_by_role(
             )
 
     return results
+
+# ======================================================
+# Update Context
+# ======================================================
+
+def update_context(
+    self,
+    context: Dict[str, Any],
+) -> None:
+    """
+    Merge new context.
+    """
+
+    self.context.update(
+
+        context
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Clear Context
+# ======================================================
+
+def clear_context(
+    self,
+) -> None:
+    """
+    Remove all context.
+    """
+
+    self.context.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Get Context
+# ======================================================
+
+def get_context(
+    self,
+    key: str,
+    default: Any = None,
+) -> Any:
+    """
+    Retrieve context value.
+    """
+
+    return self.context.get(
+
+        key,
+
+        default,
+
+    )
+
+
+# ======================================================
+# Update Memory
+# ======================================================
+
+def update_memory(
+    self,
+    memory: Dict[str, Any],
+) -> None:
+    """
+    Merge memory.
+    """
+
+    self.memory.update(
+
+        memory
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Clear Memory
+# ======================================================
+
+def clear_memory(
+    self,
+) -> None:
+    """
+    Remove all memory.
+    """
+
+    self.memory.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Get Memory
+# ======================================================
+
+def get_memory(
+    self,
+    key: str,
+    default: Any = None,
+) -> Any:
+    """
+    Retrieve memory value.
+    """
+
+    return self.memory.get(
+
+        key,
+
+        default,
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable session summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "title":
+
+            self.title,
+
+        "user_id":
+
+            self.user_id,
+
+        "status":
+
+            self.status.value,
+
+        "session_type":
+
+            self.session_type.value,
+
+        "messages":
+
+            self.message_count,
+
+        "context_items":
+
+            len(
+
+                self.context
+
+            ),
+
+        "memory_items":
+
+            len(
+
+                self.memory
+
+            ),
+
+        "token_records":
+
+            len(
+
+                self.token_usage
+
+            ),
+
+        "total_tokens":
+
+            self.total_tokens,
+
+        "total_cost":
+
+            self.total_cost,
+
+        "last_activity":
+
+            self.last_activity.isoformat(),
+
+    }
+
+
+# ======================================================
+# Analytics
+# ======================================================
+
+def analytics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Complete analytics.
+    """
+
+    return {
+
+        "conversation":
+
+            self.conversation_statistics(),
+
+        "tokens":
+
+            self.token_statistics(),
+
+        "summary":
+
+            self.summary(),
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Session diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "user_id":
+
+            self.user_id,
+
+        "title":
+
+            self.title,
+
+        "status":
+
+            self.status.value,
+
+        "type":
+
+            self.session_type.value,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "last_activity":
+
+            self.last_activity.isoformat(),
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete session.
+    """
+
+    return {
+
+        "session":
+
+            self.to_dict(),
+
+        "summary":
+
+            self.summary(),
+
+        "analytics":
+
+            self.analytics(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize session to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "Session":
+    """
+    Create Session from dictionary.
+    """
+
+    return cls(
+
+        user_id=data["user_id"],
+
+        title=data["title"],
+
+        session_type=SessionType(
+
+            data.get(
+
+                "session_type",
+
+                SessionType.CHAT,
+
+            )
+
+        ),
+
+        status=SessionStatus(
+
+            data.get(
+
+                "status",
+
+                SessionStatus.ACTIVE,
+
+            )
+
+        ),
+
+        messages=[
+
+            Message.from_dict(
+
+                item
+
+            )
+
+            for item
+
+            in data.get(
+
+                "messages",
+
+                [],
+
+            )
+
+        ],
+
+        context=data.get(
+
+            "context",
+
+            {},
+
+        ),
+
+        memory=data.get(
+
+            "memory",
+
+            {},
+
+        ),
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        token_usage=[
+
+            TokenUsage.from_dict(
+
+                item
+
+            )
+
+            for item
+
+            in data.get(
+
+                "token_usage",
+
+                [],
+
+            )
+
+        ],
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        last_activity=datetime.fromisoformat(
+
+            data.get(
+
+                "last_activity",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        is_pinned=data.get(
+
+            "is_pinned",
+
+            False,
+
+        ),
+
+        is_favorite=data.get(
+
+            "is_favorite",
+
+            False,
+
+        ),
+
+        archived=data.get(
+
+            "archived",
+
+            False,
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "Session":
+    """
+    Create Session from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "Session":
+    """
+    Deep copy session.
+    """
+
+    return Session.from_dict(
+
+        self.to_dict()
+
+    )
