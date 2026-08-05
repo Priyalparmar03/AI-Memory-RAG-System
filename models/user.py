@@ -1339,3 +1339,373 @@ def reset_profile(
     self.profile = UserProfile()
 
     self.touch()
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup user resources.
+    """
+
+    logger.info(
+
+        f"Cleaning up "
+
+        f"user '{self.username}'."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Opening user "
+
+        f"'{self.username}'."
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "User("
+
+        f"id='{self.id}', "
+
+        f"username='{self.username}', "
+
+        f"role='{self.role.value}', "
+
+        f"status='{self.status.value}'"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# String
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.profile.full_name or self.username} "
+
+        f"({self.email})"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of metadata entries.
+    """
+
+    return len(
+
+        self.metadata
+
+    )
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare users.
+    """
+
+    if not isinstance(
+
+        other,
+
+        User,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over serialized fields.
+    """
+
+    return iter(
+
+        self.to_dict().items()
+
+    )
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    key: str,
+):
+    """
+    Check metadata key.
+    """
+
+    return (
+
+        key
+
+        in
+
+        self.metadata
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Active user check.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        UserStatus.ACTIVE
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "User":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh timestamps.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"User '{self.username}' "
+
+        "refreshed."
+
+    )
+
+
+# ======================================================
+# Clear Metadata
+# ======================================================
+
+def clear_metadata(
+    self,
+) -> None:
+    """
+    Remove all metadata.
+    """
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Display Name
+# ======================================================
+
+@property
+def display_name(
+    self,
+) -> str:
+    """
+    Preferred display name.
+    """
+
+    return (
+
+        self.profile.full_name
+
+        if self.profile.full_name
+
+        else self.username
+
+    )
+
+
+# ======================================================
+# Is Active
+# ======================================================
+
+@property
+def is_active(
+    self,
+) -> bool:
+    """
+    Active status.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        UserStatus.ACTIVE
+
+    )
+
+
+# ======================================================
+# Is Admin
+# ======================================================
+
+@property
+def is_admin(
+    self,
+) -> bool:
+    """
+    Administrator check.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        UserRole.ADMIN
+
+    )
+
+
+# ======================================================
+# Is System User
+# ======================================================
+
+@property
+def is_system(
+    self,
+) -> bool:
+    """
+    System account check.
+    """
+
+    return (
+
+        self.role
+
+        ==
+
+        UserRole.SYSTEM
+
+    )
