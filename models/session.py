@@ -1560,3 +1560,460 @@ def clone(
         self.to_dict()
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup session resources.
+    """
+
+    logger.info(
+
+        f"Cleaning Session "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Entering session "
+
+        f"{self.id}"
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# Archive Session
+# ======================================================
+
+def archive(
+    self,
+) -> None:
+    """
+    Archive session.
+    """
+
+    self.archived = True
+
+    self.status = SessionStatus.ARCHIVED
+
+    self.touch()
+
+
+# ======================================================
+# Restore Session
+# ======================================================
+
+def restore(
+    self,
+) -> None:
+    """
+    Restore archived session.
+    """
+
+    self.archived = False
+
+    self.status = SessionStatus.ACTIVE
+
+    self.touch()
+
+
+# ======================================================
+# Close Session
+# ======================================================
+
+def close(
+    self,
+) -> None:
+    """
+    Close session.
+    """
+
+    self.status = SessionStatus.CLOSED
+
+    self.touch()
+
+
+# ======================================================
+# Pin Session
+# ======================================================
+
+def pin(
+    self,
+) -> None:
+    """
+    Pin session.
+    """
+
+    self.is_pinned = True
+
+    self.touch()
+
+
+# ======================================================
+# Unpin Session
+# ======================================================
+
+def unpin(
+    self,
+) -> None:
+    """
+    Unpin session.
+    """
+
+    self.is_pinned = False
+
+    self.touch()
+
+
+# ======================================================
+# Favorite Session
+# ======================================================
+
+def favorite(
+    self,
+) -> None:
+    """
+    Mark as favorite.
+    """
+
+    self.is_favorite = True
+
+    self.touch()
+
+
+# ======================================================
+# Unfavorite Session
+# ======================================================
+
+def unfavorite(
+    self,
+) -> None:
+    """
+    Remove favorite.
+    """
+
+    self.is_favorite = False
+
+    self.touch()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh timestamps.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"Session "
+
+        f"{self.id} refreshed."
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "Session":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "Session("
+
+        f"id='{self.id}', "
+
+        f"title='{self.title}', "
+
+        f"messages={len(self.messages)}, "
+
+        f"status='{self.status.value}'"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.title} "
+
+        f"({self.message_count} messages)"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of messages.
+    """
+
+    return len(
+
+        self.messages
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over messages.
+    """
+
+    return iter(
+
+        self.messages
+
+    )
+
+
+# ======================================================
+# Get Item
+# ======================================================
+
+def __getitem__(
+    self,
+    index: int,
+):
+    """
+    Get message by index.
+    """
+
+    return self.messages[
+
+        index
+
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    item,
+):
+    """
+    Check whether message exists.
+    """
+
+    return item in self.messages
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare sessions.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Session,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Check whether session is active.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        SessionStatus.ACTIVE
+
+    )
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_active(
+    self,
+) -> bool:
+    """
+    Active session.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        SessionStatus.ACTIVE
+
+    )
+
+
+@property
+def has_messages(
+    self,
+) -> bool:
+    """
+    Whether session has messages.
+    """
+
+    return len(
+
+        self.messages
+
+    ) > 0
+
+
+@property
+def has_memory(
+    self,
+) -> bool:
+    """
+    Whether memory exists.
+    """
+
+    return len(
+
+        self.memory
+
+    ) > 0
+
+
+@property
+def has_context(
+    self,
+) -> bool:
+    """
+    Whether context exists.
+    """
+
+    return len(
+
+        self.context
+
+    ) > 0
