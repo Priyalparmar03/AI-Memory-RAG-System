@@ -357,3 +357,404 @@ DEFAULT_PRICING = {
     Provider.CUSTOM: 0.0,
 
 }
+
+# ======================================================
+# Add Prompt Tokens
+# ======================================================
+
+def add_prompt_tokens(
+    self,
+    tokens: int,
+) -> None:
+    """
+    Add prompt tokens.
+    """
+
+    if tokens < 0:
+
+        raise TokenUsageError(
+
+            "Token count cannot "
+
+            "be negative."
+
+        )
+
+    self.prompt_tokens += tokens
+
+    self.touch()
+
+
+# ======================================================
+# Add Completion Tokens
+# ======================================================
+
+def add_completion_tokens(
+    self,
+    tokens: int,
+) -> None:
+    """
+    Add completion tokens.
+    """
+
+    if tokens < 0:
+
+        raise TokenUsageError(
+
+            "Token count cannot "
+
+            "be negative."
+
+        )
+
+    self.completion_tokens += tokens
+
+    self.touch()
+
+
+# ======================================================
+# Add Embedding Tokens
+# ======================================================
+
+def add_embedding_tokens(
+    self,
+    tokens: int,
+) -> None:
+    """
+    Add embedding tokens.
+    """
+
+    if tokens < 0:
+
+        raise TokenUsageError(
+
+            "Token count cannot "
+
+            "be negative."
+
+        )
+
+    self.embedding_tokens += tokens
+
+    self.touch()
+
+
+# ======================================================
+# Add Cached Tokens
+# ======================================================
+
+def add_cached_tokens(
+    self,
+    tokens: int,
+) -> None:
+    """
+    Add cached tokens.
+    """
+
+    if tokens < 0:
+
+        raise TokenUsageError(
+
+            "Token count cannot "
+
+            "be negative."
+
+        )
+
+    self.cached_tokens += tokens
+
+    self.touch()
+
+
+# ======================================================
+# Update Provider Pricing
+# ======================================================
+
+def update_pricing(
+    self,
+    cost_per_1k_tokens: float,
+) -> None:
+    """
+    Update pricing.
+    """
+
+    if cost_per_1k_tokens < 0:
+
+        raise TokenUsageError(
+
+            "Pricing cannot "
+
+            "be negative."
+
+        )
+
+    self.cost_per_1k_tokens = (
+
+        cost_per_1k_tokens
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Apply Default Pricing
+# ======================================================
+
+def apply_default_pricing(
+    self,
+) -> None:
+    """
+    Apply default provider pricing.
+    """
+
+    self.cost_per_1k_tokens = (
+
+        DEFAULT_PRICING.get(
+
+            self.provider,
+
+            0.0,
+
+        )
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Merge Usage
+# ======================================================
+
+def merge(
+    self,
+    other: "TokenUsage",
+) -> None:
+    """
+    Merge another usage object.
+    """
+
+    if not isinstance(
+
+        other,
+
+        TokenUsage,
+
+    ):
+
+        raise TokenUsageError(
+
+            "Expected TokenUsage."
+
+        )
+
+    self.prompt_tokens += (
+
+        other.prompt_tokens
+
+    )
+
+    self.completion_tokens += (
+
+        other.completion_tokens
+
+    )
+
+    self.embedding_tokens += (
+
+        other.embedding_tokens
+
+    )
+
+    self.cached_tokens += (
+
+        other.cached_tokens
+
+    )
+
+    self.metadata.update(
+
+        other.metadata
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Reset Usage
+# ======================================================
+
+def reset(
+    self,
+) -> None:
+    """
+    Reset token usage.
+    """
+
+    self.prompt_tokens = 0
+
+    self.completion_tokens = 0
+
+    self.embedding_tokens = 0
+
+    self.cached_tokens = 0
+
+    self.touch()
+
+
+# ======================================================
+# Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Usage statistics.
+    """
+
+    return {
+
+        "provider":
+
+            self.provider.value,
+
+        "model":
+
+            self.model_name,
+
+        "model_type":
+
+            self.model_type.value,
+
+        "prompt_tokens":
+
+            self.prompt_tokens,
+
+        "completion_tokens":
+
+            self.completion_tokens,
+
+        "embedding_tokens":
+
+            self.embedding_tokens,
+
+        "cached_tokens":
+
+            self.cached_tokens,
+
+        "total_tokens":
+
+            self.total_tokens,
+
+        "cost_per_1k":
+
+            self.cost_per_1k_tokens,
+
+        "total_cost":
+
+            self.total_cost,
+
+        "currency":
+
+            self.currency,
+
+    }
+
+
+# ======================================================
+# Token Breakdown
+# ======================================================
+
+def token_breakdown(
+    self,
+) -> Dict[str, float]:
+    """
+    Percentage contribution
+    of each token type.
+    """
+
+    total = max(
+
+        self.total_tokens,
+
+        1,
+
+    )
+
+    return {
+
+        "prompt_percent":
+
+            round(
+
+                self.prompt_tokens
+
+                / total
+
+                * 100,
+
+                2,
+
+            ),
+
+        "completion_percent":
+
+            round(
+
+                self.completion_tokens
+
+                / total
+
+                * 100,
+
+                2,
+
+            ),
+
+        "embedding_percent":
+
+            round(
+
+                self.embedding_tokens
+
+                / total
+
+                * 100,
+
+                2,
+
+            ),
+
+        "cached_percent":
+
+            round(
+
+                self.cached_tokens
+
+                / total
+
+                * 100,
+
+                2,
+
+            ),
+
+    }
+
+
+# ======================================================
+# Is Empty
+# ======================================================
+
+@property
+def is_empty(
+    self,
+) -> bool:
+    """
+    Check whether usage is empty.
+    """
+
+    return self.total_tokens == 0
