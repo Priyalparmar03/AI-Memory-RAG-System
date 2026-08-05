@@ -1228,3 +1228,427 @@ def average_token_cost(
         8,
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup token usage resources.
+    """
+
+    logger.info(
+
+        f"Cleaning TokenUsage "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        "Entering TokenUsage context."
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "TokenUsage("
+
+        f"provider='{self.provider.value}', "
+
+        f"model='{self.model_name}', "
+
+        f"tokens={self.total_tokens}, "
+
+        f"cost={self.total_cost:.6f} "
+
+        f"{self.currency}"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.provider.value}:"
+
+        f"{self.model_name} "
+
+        f"({self.total_tokens} tokens)"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Total tokens.
+    """
+
+    return self.total_tokens
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare TokenUsage objects.
+    """
+
+    if not isinstance(
+
+        other,
+
+        TokenUsage,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over serialized fields.
+    """
+
+    return iter(
+
+        self.to_dict().items()
+
+    )
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    key: str,
+):
+    """
+    Check metadata key.
+    """
+
+    return (
+
+        key
+
+        in
+
+        self.metadata
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Check whether usage exists.
+    """
+
+    return (
+
+        self.total_tokens
+
+        >
+
+        0
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "TokenUsage":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh timestamps.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"Refreshed "
+
+        f"TokenUsage {self.id}"
+
+    )
+
+
+# ======================================================
+# Clear Metadata
+# ======================================================
+
+def clear_metadata(
+    self,
+) -> None:
+    """
+    Remove all metadata.
+    """
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Add Metadata
+# ======================================================
+
+def add_metadata(
+    self,
+    key: str,
+    value: Any,
+) -> None:
+    """
+    Add metadata.
+    """
+
+    self.metadata[key] = value
+
+    self.touch()
+
+
+# ======================================================
+# Remove Metadata
+# ======================================================
+
+def remove_metadata(
+    self,
+    key: str,
+) -> None:
+    """
+    Remove metadata.
+    """
+
+    self.metadata.pop(
+
+        key,
+
+        None,
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Is Free Request
+# ======================================================
+
+@property
+def is_free(
+    self,
+) -> bool:
+    """
+    Whether request cost is zero.
+    """
+
+    return self.total_cost == 0.0
+
+
+# ======================================================
+# Is Chat Model
+# ======================================================
+
+@property
+def is_chat(
+    self,
+) -> bool:
+    """
+    Chat model check.
+    """
+
+    return (
+
+        self.model_type
+
+        ==
+
+        ModelType.CHAT
+
+    )
+
+
+# ======================================================
+# Is Embedding Model
+# ======================================================
+
+@property
+def is_embedding(
+    self,
+) -> bool:
+    """
+    Embedding model check.
+    """
+
+    return (
+
+        self.model_type
+
+        ==
+
+        ModelType.EMBEDDING
+
+    )
+
+
+# ======================================================
+# Is Vision Model
+# ======================================================
+
+@property
+def is_vision(
+    self,
+) -> bool:
+    """
+    Vision model check.
+    """
+
+    return (
+
+        self.model_type
+
+        ==
+
+        ModelType.VISION
+
+    )
+
+
+# ======================================================
+# Is Agent Model
+# ======================================================
+
+@property
+def is_agent(
+    self,
+) -> bool:
+    """
+    Agent model check.
+    """
+
+    return (
+
+        self.model_type
+
+        ==
+
+        ModelType.AGENT
+
+    )
