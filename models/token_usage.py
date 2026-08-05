@@ -758,3 +758,473 @@ def is_empty(
     """
 
     return self.total_tokens == 0
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize TokenUsage to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "TokenUsage":
+    """
+    Create TokenUsage from dictionary.
+    """
+
+    return cls(
+
+        provider=Provider(
+
+            data["provider"]
+
+        ),
+
+        model_name=data["model_name"],
+
+        model_type=ModelType(
+
+            data["model_type"]
+
+        ),
+
+        prompt_tokens=data.get(
+
+            "prompt_tokens",
+
+            0,
+
+        ),
+
+        completion_tokens=data.get(
+
+            "completion_tokens",
+
+            0,
+
+        ),
+
+        embedding_tokens=data.get(
+
+            "embedding_tokens",
+
+            0,
+
+        ),
+
+        cached_tokens=data.get(
+
+            "cached_tokens",
+
+            0,
+
+        ),
+
+        cost_per_1k_tokens=data.get(
+
+            "cost_per_1k_tokens",
+
+            0.0,
+
+        ),
+
+        currency=data.get(
+
+            "currency",
+
+            "USD",
+
+        ),
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "TokenUsage":
+    """
+    Create TokenUsage from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "TokenUsage":
+    """
+    Deep copy TokenUsage.
+    """
+
+    return TokenUsage.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "provider":
+
+            self.provider.value,
+
+        "model":
+
+            self.model_name,
+
+        "type":
+
+            self.model_type.value,
+
+        "total_tokens":
+
+            self.total_tokens,
+
+        "total_cost":
+
+            self.total_cost,
+
+        "currency":
+
+            self.currency,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Token usage diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "provider":
+
+            self.provider.value,
+
+        "model_name":
+
+            self.model_name,
+
+        "model_type":
+
+            self.model_type.value,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "breakdown":
+
+            self.token_breakdown(),
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete token usage.
+    """
+
+    return {
+
+        "usage":
+
+            self.to_dict(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "summary":
+
+            self.summary(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# Compare Usage
+# ======================================================
+
+def compare(
+    self,
+    other: "TokenUsage",
+) -> Dict[str, Any]:
+    """
+    Compare two usage records.
+    """
+
+    if not isinstance(
+
+        other,
+
+        TokenUsage,
+
+    ):
+
+        raise TokenUsageError(
+
+            "Expected TokenUsage."
+
+        )
+
+    return {
+
+        "token_difference":
+
+            self.total_tokens
+
+            -
+
+            other.total_tokens,
+
+        "cost_difference":
+
+            round(
+
+                self.total_cost
+
+                -
+
+                other.total_cost,
+
+                6,
+
+            ),
+
+        "same_provider":
+
+            self.provider
+
+            ==
+
+            other.provider,
+
+        "same_model":
+
+            self.model_name
+
+            ==
+
+            other.model_name,
+
+    }
+
+
+# ======================================================
+# Aggregate Multiple Usage Records
+# ======================================================
+
+@classmethod
+def aggregate(
+    cls,
+    usages: list["TokenUsage"],
+) -> "TokenUsage":
+    """
+    Aggregate multiple TokenUsage
+    objects into one.
+    """
+
+    if not usages:
+
+        raise TokenUsageError(
+
+            "No usage records provided."
+
+        )
+
+    first = usages[0].clone()
+
+    first.reset()
+
+    for usage in usages:
+
+        first.merge(
+
+            usage
+
+        )
+
+    return first
+
+
+# ======================================================
+# Cost Per Token
+# ======================================================
+
+@property
+def cost_per_token(
+    self,
+) -> float:
+    """
+    Cost of one token.
+    """
+
+    return (
+
+        self.cost_per_1k_tokens
+
+        /
+
+        1000
+
+    )
+
+
+# ======================================================
+# Average Cost
+# ======================================================
+
+@property
+def average_token_cost(
+    self,
+) -> float:
+    """
+    Average cost per consumed token.
+    """
+
+    if self.total_tokens == 0:
+
+        return 0.0
+
+    return round(
+
+        self.total_cost
+
+        /
+
+        self.total_tokens,
+
+        8,
+
+    )
