@@ -912,3 +912,430 @@ def account_age_days(
         self.created_at
 
     ).days
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize user to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "User":
+    """
+    Create User from dictionary.
+    """
+
+    preferences = UserPreferences(
+
+        **data.get(
+
+            "preferences",
+
+            {},
+
+        )
+
+    )
+
+    profile = UserProfile(
+
+        **data.get(
+
+            "profile",
+
+            {},
+
+        )
+
+    )
+
+    return cls(
+
+        username=data["username"],
+
+        email=data["email"],
+
+        password_hash=data["password_hash"],
+
+        role=UserRole(
+
+            data.get(
+
+                "role",
+
+                UserRole.USER,
+
+            )
+
+        ),
+
+        status=UserStatus(
+
+            data.get(
+
+                "status",
+
+                UserStatus.ACTIVE,
+
+            )
+
+        ),
+
+        preferences=preferences,
+
+        profile=profile,
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        last_login=(
+
+            datetime.fromisoformat(
+
+                data["last_login"]
+
+            )
+
+            if data.get(
+
+                "last_login"
+
+            )
+
+            else None
+
+        ),
+
+        login_count=data.get(
+
+            "login_count",
+
+            0,
+
+        ),
+
+        is_verified=data.get(
+
+            "is_verified",
+
+            False,
+
+        ),
+
+        is_superuser=data.get(
+
+            "is_superuser",
+
+            False,
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "User":
+    """
+    Create User from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone User
+# ======================================================
+
+def clone(
+    self,
+) -> "User":
+    """
+    Deep copy user.
+    """
+
+    return User.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Merge Metadata
+# ======================================================
+
+def merge_metadata(
+    self,
+    metadata: Dict[str, Any],
+) -> None:
+    """
+    Merge metadata.
+    """
+
+    self.metadata.update(
+
+        metadata
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete user.
+    """
+
+    return {
+
+        "user":
+
+            self.to_dict(),
+
+        "statistics":
+
+            self.statistics(),
+
+        "preferences":
+
+            self.preferences.to_dict(),
+
+        "profile":
+
+            self.profile.to_dict(),
+
+    }
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "username":
+
+            self.username,
+
+        "name":
+
+            self.profile.full_name,
+
+        "email":
+
+            self.email,
+
+        "role":
+
+            self.role.value,
+
+        "status":
+
+            self.status.value,
+
+        "verified":
+
+            self.is_verified,
+
+        "organization":
+
+            self.profile.organization,
+
+        "last_login":
+
+            self.last_login.isoformat()
+
+            if self.last_login
+
+            else None,
+
+        "login_count":
+
+            self.login_count,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    User diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "username":
+
+            self.username,
+
+        "email":
+
+            self.email,
+
+        "role":
+
+            self.role.value,
+
+        "status":
+
+            self.status.value,
+
+        "verified":
+
+            self.is_verified,
+
+        "superuser":
+
+            self.is_superuser,
+
+        "account_age_days":
+
+            self.account_age_days,
+
+        "statistics":
+
+            self.statistics(),
+
+    }
+
+
+# ======================================================
+# Reset Preferences
+# ======================================================
+
+def reset_preferences(
+    self,
+) -> None:
+    """
+    Reset user preferences.
+    """
+
+    self.preferences = UserPreferences()
+
+    self.touch()
+
+
+# ======================================================
+# Reset Profile
+# ======================================================
+
+def reset_profile(
+    self,
+) -> None:
+    """
+    Reset user profile.
+    """
+
+    self.profile = UserProfile()
+
+    self.touch()
