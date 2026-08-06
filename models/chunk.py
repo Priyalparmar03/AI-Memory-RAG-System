@@ -802,3 +802,596 @@ def advanced_statistics(
             ),
 
     }
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize chunk to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "Chunk":
+    """
+    Create Chunk from dictionary.
+    """
+
+    return cls(
+
+        document_id=data["document_id"],
+
+        chunk_index=data["chunk_index"],
+
+        text=data["text"],
+
+        chunk_type=ChunkType(
+
+            data.get(
+
+                "chunk_type",
+
+                ChunkType.TEXT,
+
+            )
+
+        ),
+
+        status=ChunkStatus(
+
+            data.get(
+
+                "status",
+
+                ChunkStatus.NEW,
+
+            )
+
+        ),
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        embedding=data.get(
+
+            "embedding"
+
+        ),
+
+        language=data.get(
+
+            "language",
+
+            "unknown",
+
+        ),
+
+        version=data.get(
+
+            "version",
+
+            "1.0",
+
+        ),
+
+        start_offset=data.get(
+
+            "start_offset",
+
+            0,
+
+        ),
+
+        end_offset=data.get(
+
+            "end_offset",
+
+            0,
+
+        ),
+
+        source_page=data.get(
+
+            "source_page",
+
+            1,
+
+        ),
+
+        checksum=data.get(
+
+            "checksum",
+
+            "",
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "Chunk":
+    """
+    Create Chunk from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "Chunk":
+    """
+    Deep copy chunk.
+    """
+
+    return Chunk.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "document_id":
+
+            self.document_id,
+
+        "chunk_index":
+
+            self.chunk_index,
+
+        "chunk_type":
+
+            self.chunk_type.value,
+
+        "status":
+
+            self.status.value,
+
+        "tokens":
+
+            self.token_count,
+
+        "words":
+
+            self.word_count,
+
+        "characters":
+
+            self.character_count,
+
+        "page":
+
+            self.source_page,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Chunk diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "checksum":
+
+            self.checksum,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete chunk.
+    """
+
+    return {
+
+        "chunk":
+
+            self.to_dict(),
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# Preview
+# ======================================================
+
+@property
+def preview(
+    self,
+) -> str:
+    """
+    Preview chunk text.
+    """
+
+    if len(
+
+        self.text
+
+    ) <= 250:
+
+        return self.text
+
+    return (
+
+        self.text[:250]
+
+        + "..."
+
+    )
+
+
+# ======================================================
+# Analytics
+# ======================================================
+
+def analytics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Chunk analytics.
+    """
+
+    return {
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "embedding_dimension":
+
+            self.embedding_dimension,
+
+        "language":
+
+            self.language,
+
+        "page":
+
+            self.source_page,
+
+        "offsets": {
+
+            "start":
+
+                self.start_offset,
+
+            "end":
+
+                self.end_offset,
+
+        },
+
+    }
+
+
+# ======================================================
+# Similarity Placeholder
+# ======================================================
+
+def similarity(
+    self,
+    other: "Chunk",
+) -> float:
+    """
+    Placeholder similarity method.
+
+    Override with cosine similarity
+    implementation if embeddings
+    are available.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Chunk,
+
+    ):
+
+        raise ChunkError(
+
+            "Expected Chunk."
+
+        )
+
+    if (
+
+        self.checksum
+
+        ==
+
+        other.checksum
+
+    ):
+
+        return 1.0
+
+    return 0.0
+
+
+# ======================================================
+# Compare
+# ======================================================
+
+def compare(
+    self,
+    other: "Chunk",
+) -> Dict[str, Any]:
+    """
+    Compare two chunks.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Chunk,
+
+    ):
+
+        raise ChunkError(
+
+            "Expected Chunk."
+
+        )
+
+    return {
+
+        "same_document":
+
+            self.document_id
+
+            ==
+
+            other.document_id,
+
+        "same_type":
+
+            self.chunk_type
+
+            ==
+
+            other.chunk_type,
+
+        "same_status":
+
+            self.status
+
+            ==
+
+            other.status,
+
+        "word_difference":
+
+            abs(
+
+                self.word_count
+
+                -
+
+                other.word_count
+
+            ),
+
+        "character_difference":
+
+            abs(
+
+                self.character_count
+
+                -
+
+                other.character_count
+
+            ),
+
+        "similarity":
+
+            self.similarity(
+
+                other
+
+            ),
+
+    }
+
+
+# ======================================================
+# Has Metadata
+# ======================================================
+
+@property
+def has_metadata(
+    self,
+) -> bool:
+    """
+    Whether metadata exists.
+    """
+
+    return (
+
+        len(
+
+            self.metadata
+
+        )
+
+        >
+
+        0
+
+    )
+
+
+# ======================================================
+# Is Searchable
+# ======================================================
+
+@property
+def is_searchable(
+    self,
+) -> bool:
+    """
+    Searchable chunk.
+    """
+
+    return (
+
+        self.status
+
+        !=
+
+        ChunkStatus.DELETED
+
+    )
