@@ -432,3 +432,373 @@ class Chunk:
                 self.updated_at.isoformat(),
 
         }
+
+# ======================================================
+# Update Text
+# ======================================================
+
+def update_text(
+    self,
+    text: str,
+) -> None:
+    """
+    Update chunk text.
+    """
+
+    if not text.strip():
+
+        raise ChunkError(
+
+            "Chunk text cannot "
+
+            "be empty."
+
+        )
+
+    self.text = text
+
+    self.refresh_hash()
+
+    self.touch()
+
+
+# ======================================================
+# Set Embedding
+# ======================================================
+
+def set_embedding(
+    self,
+    embedding: List[float],
+) -> None:
+    """
+    Set embedding vector.
+    """
+
+    if not isinstance(
+
+        embedding,
+
+        list,
+
+    ):
+
+        raise ChunkError(
+
+            "Embedding must "
+
+            "be a list."
+
+        )
+
+    self.embedding = embedding
+
+    self.touch()
+
+
+# ======================================================
+# Clear Embedding
+# ======================================================
+
+def clear_embedding(
+    self,
+) -> None:
+    """
+    Remove embedding vector.
+    """
+
+    self.embedding = None
+
+    self.touch()
+
+
+# ======================================================
+# Refresh Hash
+# ======================================================
+
+def refresh_hash(
+    self,
+) -> None:
+    """
+    Recalculate checksum.
+    """
+
+    self.checksum = (
+
+        self.generate_hash()
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Update Status
+# ======================================================
+
+def update_status(
+    self,
+    status: ChunkStatus,
+) -> None:
+    """
+    Update chunk status.
+    """
+
+    self.status = status
+
+    self.touch()
+
+
+# ======================================================
+# Mark Embedded
+# ======================================================
+
+def mark_embedded(
+    self,
+) -> None:
+    """
+    Mark chunk as embedded.
+    """
+
+    self.status = (
+
+        ChunkStatus.EMBEDDED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Mark Indexed
+# ======================================================
+
+def mark_indexed(
+    self,
+) -> None:
+    """
+    Mark chunk as indexed.
+    """
+
+    self.status = (
+
+        ChunkStatus.INDEXED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Mark Retrieved
+# ======================================================
+
+def mark_retrieved(
+    self,
+) -> None:
+    """
+    Mark chunk as retrieved.
+    """
+
+    self.status = (
+
+        ChunkStatus.RETRIEVED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Mark Failed
+# ======================================================
+
+def mark_failed(
+    self,
+) -> None:
+    """
+    Mark chunk as failed.
+    """
+
+    self.status = (
+
+        ChunkStatus.FAILED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Search Text
+# ======================================================
+
+def contains(
+    self,
+    keyword: str,
+) -> bool:
+    """
+    Search keyword in chunk.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.text.lower()
+
+    )
+
+
+# ======================================================
+# Token Count
+# ======================================================
+
+@property
+def token_count(
+    self,
+) -> int:
+    """
+    Approximate token count.
+    """
+
+    return len(
+
+        self.text.split()
+
+    )
+
+
+# ======================================================
+# Character Count
+# ======================================================
+
+@property
+def character_count(
+    self,
+) -> int:
+    """
+    Number of characters.
+    """
+
+    return len(
+
+        self.text
+
+    )
+
+
+# ======================================================
+# Word Count
+# ======================================================
+
+@property
+def word_count(
+    self,
+) -> int:
+    """
+    Number of words.
+    """
+
+    return len(
+
+        self.text.split()
+
+    )
+
+
+# ======================================================
+# Embedding Dimension
+# ======================================================
+
+@property
+def embedding_dimension(
+    self,
+) -> int:
+    """
+    Size of embedding vector.
+    """
+
+    if self.embedding is None:
+
+        return 0
+
+    return len(
+
+        self.embedding
+
+    )
+
+
+# ======================================================
+# Has Embedding
+# ======================================================
+
+@property
+def has_embedding(
+    self,
+) -> bool:
+    """
+    Whether embedding exists.
+    """
+
+    return (
+
+        self.embedding
+
+        is not None
+
+    )
+
+
+# ======================================================
+# Advanced Statistics
+# ======================================================
+
+def advanced_statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Advanced chunk statistics.
+    """
+
+    return {
+
+        **self.statistics(),
+
+        "token_count":
+
+            self.token_count,
+
+        "embedding_dimension":
+
+            self.embedding_dimension,
+
+        "has_embedding":
+
+            self.has_embedding,
+
+        "metadata_entries":
+
+            len(
+
+                self.metadata
+
+            ),
+
+        "checksum":
+
+            self.checksum,
+
+        "offset_range":
+
+            (
+
+                self.start_offset,
+
+                self.end_offset,
+
+            ),
+
+    }
