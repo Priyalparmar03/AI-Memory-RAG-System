@@ -1395,3 +1395,464 @@ def is_searchable(
         ChunkStatus.DELETED
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup chunk resources.
+    """
+
+    logger.info(
+
+        f"Cleaning Chunk "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Opening Chunk "
+
+        f"{self.id}"
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh chunk.
+    """
+
+    self.refresh_hash()
+
+    self.touch()
+
+    logger.info(
+
+        f"Chunk "
+
+        f"{self.id} refreshed."
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "Chunk":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Delete Chunk
+# ======================================================
+
+def delete(
+    self,
+) -> None:
+    """
+    Soft delete chunk.
+    """
+
+    self.status = (
+
+        ChunkStatus.DELETED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Clear Metadata
+# ======================================================
+
+def clear_metadata(
+    self,
+) -> None:
+    """
+    Remove all metadata.
+    """
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Clear Text
+# ======================================================
+
+def clear_text(
+    self,
+) -> None:
+    """
+    Remove chunk text.
+    """
+
+    self.text = ""
+
+    self.refresh_hash()
+
+    self.touch()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "Chunk("
+
+        f"id='{self.id}', "
+
+        f"index={self.chunk_index}, "
+
+        f"type='{self.chunk_type.value}', "
+
+        f"status='{self.status.value}'"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"Chunk "
+
+        f"{self.chunk_index} "
+
+        f"({self.word_count} words)"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of characters.
+    """
+
+    return len(
+
+        self.text
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over words.
+    """
+
+    return iter(
+
+        self.text.split()
+
+    )
+
+
+# ======================================================
+# Get Item
+# ======================================================
+
+def __getitem__(
+    self,
+    index,
+):
+    """
+    Character indexing.
+    """
+
+    return self.text[
+
+        index
+
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    keyword: str,
+):
+    """
+    Keyword search.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.text.lower()
+
+    )
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare chunks.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Chunk,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Chunk validity.
+    """
+
+    return (
+
+        self.status
+
+        !=
+
+        ChunkStatus.DELETED
+
+    )
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_indexed(
+    self,
+) -> bool:
+    """
+    Indexed chunk.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        ChunkStatus.INDEXED
+
+    )
+
+
+@property
+def is_embedded(
+    self,
+) -> bool:
+    """
+    Embedded chunk.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        ChunkStatus.EMBEDDED
+
+    )
+
+
+@property
+def is_retrieved(
+    self,
+) -> bool:
+    """
+    Retrieved chunk.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        ChunkStatus.RETRIEVED
+
+    )
+
+
+@property
+def is_deleted(
+    self,
+) -> bool:
+    """
+    Deleted chunk.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        ChunkStatus.DELETED
+
+    )
+
+
+@property
+def has_text(
+    self,
+) -> bool:
+    """
+    Whether chunk contains text.
+    """
+
+    return (
+
+        len(
+
+            self.text.strip()
+
+        )
+
+        >
+
+        0
+
+    )
+
+
+@property
+def age_seconds(
+    self,
+) -> float:
+    """
+    Chunk age in seconds.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.created_at
+
+    ).total_seconds()
