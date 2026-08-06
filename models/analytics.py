@@ -1399,3 +1399,419 @@ def total_queries(
         self.failed_queries
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup analytics resources.
+    """
+
+    logger.info(
+
+        f"Cleaning Analytics "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Opening Analytics "
+
+        f"{self.id}"
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh analytics.
+    """
+
+    self.touch()
+
+    logger.info(
+
+        f"Analytics "
+
+        f"{self.id} refreshed."
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "Analytics":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Clear Metadata
+# ======================================================
+
+def clear_metadata(
+    self,
+) -> None:
+    """
+    Remove all metadata.
+    """
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "Analytics("
+
+        f"id='{self.id}', "
+
+        f"type='{self.analytics_type.value}', "
+
+        f"period='{self.period.value}', "
+
+        f"queries={self.total_queries}"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.analytics_type.value.title()} "
+
+        f"Analytics "
+
+        f"({self.period.value})"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Total tracked entities.
+    """
+
+    return (
+
+        self.session_count
+
+        +
+
+        self.document_count
+
+        +
+
+        self.chunk_count
+
+        +
+
+        self.message_count
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over serialized fields.
+    """
+
+    return iter(
+
+        self.to_dict().items()
+
+    )
+
+
+# ======================================================
+# Get Item
+# ======================================================
+
+def __getitem__(
+    self,
+    key: str,
+):
+    """
+    Dictionary-style access.
+    """
+
+    return self.to_dict()[
+
+        key
+
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    key: str,
+):
+    """
+    Check metadata key.
+    """
+
+    return (
+
+        key
+
+        in
+
+        self.metadata
+
+    )
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare analytics objects.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Analytics,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Whether analytics contains data.
+    """
+
+    return self.has_data
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_empty(
+    self,
+) -> bool:
+    """
+    No analytics data.
+    """
+
+    return not self.has_data
+
+
+@property
+def total_entities(
+    self,
+) -> int:
+    """
+    Total tracked entities.
+    """
+
+    return (
+
+        self.session_count
+
+        +
+
+        self.message_count
+
+        +
+
+        self.document_count
+
+        +
+
+        self.chunk_count
+
+    )
+
+
+@property
+def total_resources(
+    self,
+) -> int:
+    """
+    Total documents and chunks.
+    """
+
+    return (
+
+        self.document_count
+
+        +
+
+        self.chunk_count
+
+    )
+
+
+@property
+def has_cost(
+    self,
+) -> bool:
+    """
+    Whether any cost exists.
+    """
+
+    return self.total_cost > 0
+
+
+@property
+def has_latency(
+    self,
+) -> bool:
+    """
+    Whether latency exists.
+    """
+
+    return self.average_latency_ms > 0
+
+
+@property
+def has_queries(
+    self,
+) -> bool:
+    """
+    Whether queries exist.
+    """
+
+    return self.total_queries > 0
+
+
+@property
+def age_seconds(
+    self,
+) -> float:
+    """
+    Analytics age in seconds.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.created_at
+
+    ).total_seconds()
