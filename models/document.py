@@ -1582,3 +1582,507 @@ def is_searchable(
         DocumentStatus.DELETED
 
     )
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup document resources.
+    """
+
+    logger.info(
+
+        f"Cleaning Document "
+
+        f"{self.id}"
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    logger.info(
+
+        f"Opening document "
+
+        f"{self.file_name}"
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh document.
+    """
+
+    self.refresh_hash()
+
+    self.touch()
+
+    logger.info(
+
+        f"Document "
+
+        f"{self.file_name} refreshed."
+
+    )
+
+
+# ======================================================
+# Copy
+# ======================================================
+
+def copy(
+    self,
+) -> "Document":
+    """
+    Alias for clone().
+    """
+
+    return self.clone()
+
+
+# ======================================================
+# Delete Document
+# ======================================================
+
+def delete(
+    self,
+) -> None:
+    """
+    Soft delete document.
+    """
+
+    self.status = (
+
+        DocumentStatus.DELETED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Mark Processed
+# ======================================================
+
+def mark_processed(
+    self,
+) -> None:
+    """
+    Mark document as processed.
+    """
+
+    self.status = (
+
+        DocumentStatus.PROCESSED
+
+    )
+
+    self.touch()
+
+
+# ======================================================
+# Clear Metadata
+# ======================================================
+
+def clear_metadata(
+    self,
+) -> None:
+    """
+    Remove all metadata.
+    """
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Clear Tags
+# ======================================================
+
+def clear_tags(
+    self,
+) -> None:
+    """
+    Remove all tags.
+    """
+
+    self.tags.clear()
+
+    self.touch()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "Document("
+
+        f"id='{self.id}', "
+
+        f"file='{self.file_name}', "
+
+        f"type='{self.document_type.value}', "
+
+        f"chunks={self.chunk_count}"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.file_name} "
+
+        f"({self.word_count} words)"
+
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of chunks.
+    """
+
+    return len(
+
+        self.chunks
+
+    )
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over chunks.
+    """
+
+    return iter(
+
+        self.chunks
+
+    )
+
+
+# ======================================================
+# Get Item
+# ======================================================
+
+def __getitem__(
+    self,
+    index: int,
+):
+    """
+    Get chunk by index.
+    """
+
+    return self.chunks[
+
+        index
+
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    keyword: str,
+):
+    """
+    Search keyword in document.
+    """
+
+    return (
+
+        keyword.lower()
+
+        in
+
+        self.text.lower()
+
+    )
+
+
+# ======================================================
+# Equality
+# ======================================================
+
+def __eq__(
+    self,
+    other: object,
+) -> bool:
+    """
+    Compare documents.
+    """
+
+    if not isinstance(
+
+        other,
+
+        Document,
+
+    ):
+
+        return False
+
+    return self.id == other.id
+
+
+# ======================================================
+# Hash
+# ======================================================
+
+def __hash__(
+    self,
+):
+    """
+    Hash by UUID.
+    """
+
+    return hash(
+
+        self.id
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Whether document is valid.
+    """
+
+    return (
+
+        self.status
+
+        !=
+
+        DocumentStatus.DELETED
+
+    )
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_indexed(
+    self,
+) -> bool:
+    """
+    Indexed check.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        DocumentStatus.INDEXED
+
+    )
+
+
+@property
+def is_embedded(
+    self,
+) -> bool:
+    """
+    Embedded check.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        DocumentStatus.EMBEDDED
+
+    )
+
+
+@property
+def is_deleted(
+    self,
+) -> bool:
+    """
+    Deleted check.
+    """
+
+    return (
+
+        self.status
+
+        ==
+
+        DocumentStatus.DELETED
+
+    )
+
+
+@property
+def has_text(
+    self,
+) -> bool:
+    """
+    Whether document has text.
+    """
+
+    return (
+
+        len(
+
+            self.text.strip()
+
+        )
+
+        >
+
+        0
+
+    )
+
+
+@property
+def has_metadata(
+    self,
+) -> bool:
+    """
+    Whether metadata exists.
+    """
+
+    return (
+
+        len(
+
+            self.metadata
+
+        )
+
+        >
+
+        0
+
+    )
+
+
+@property
+def has_tags(
+    self,
+) -> bool:
+    """
+    Whether tags exist.
+    """
+
+    return (
+
+        len(
+
+            self.tags
+
+        )
+
+        >
+
+        0
+
+    )
+
+
+@property
+def age_seconds(
+    self,
+) -> float:
+    """
+    Document age in seconds.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.created_at
+
+    ).total_seconds()
