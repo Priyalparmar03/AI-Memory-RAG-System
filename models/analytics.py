@@ -895,3 +895,507 @@ def advanced_statistics(
             ),
 
     }
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize analytics to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "Analytics":
+    """
+    Create Analytics from dictionary.
+    """
+
+    return cls(
+
+        analytics_type=AnalyticsType(
+
+            data.get(
+
+                "analytics_type",
+
+                AnalyticsType.SYSTEM,
+
+            )
+
+        ),
+
+        period=AnalyticsPeriod(
+
+            data.get(
+
+                "period",
+
+                AnalyticsPeriod.DAILY,
+
+            )
+
+        ),
+
+        session_count=data.get(
+
+            "session_count",
+
+            0,
+
+        ),
+
+        message_count=data.get(
+
+            "message_count",
+
+            0,
+
+        ),
+
+        document_count=data.get(
+
+            "document_count",
+
+            0,
+
+        ),
+
+        chunk_count=data.get(
+
+            "chunk_count",
+
+            0,
+
+        ),
+
+        total_tokens=data.get(
+
+            "total_tokens",
+
+            0,
+
+        ),
+
+        total_cost=data.get(
+
+            "total_cost",
+
+            0.0,
+
+        ),
+
+        average_latency_ms=data.get(
+
+            "average_latency_ms",
+
+            0.0,
+
+        ),
+
+        retrieval_count=data.get(
+
+            "retrieval_count",
+
+            0,
+
+        ),
+
+        successful_queries=data.get(
+
+            "successful_queries",
+
+            0,
+
+        ),
+
+        failed_queries=data.get(
+
+            "failed_queries",
+
+            0,
+
+        ),
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "Analytics":
+    """
+    Create Analytics from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "Analytics":
+    """
+    Deep copy analytics.
+    """
+
+    return Analytics.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "analytics_type":
+
+            self.analytics_type.value,
+
+        "period":
+
+            self.period.value,
+
+        "sessions":
+
+            self.session_count,
+
+        "messages":
+
+            self.message_count,
+
+        "documents":
+
+            self.document_count,
+
+        "chunks":
+
+            self.chunk_count,
+
+        "tokens":
+
+            self.total_tokens,
+
+        "cost":
+
+            self.total_cost,
+
+        "success_rate":
+
+            self.success_rate,
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Analytics diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+    }
+
+
+# ======================================================
+# Analytics Report
+# ======================================================
+
+def report(
+    self,
+) -> Dict[str, Any]:
+    """
+    Complete analytics report.
+    """
+
+    return {
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "performance": {
+
+            "average_latency_ms":
+
+                self.average_latency_ms,
+
+            "retrieval_count":
+
+                self.retrieval_count,
+
+            "success_rate":
+
+                self.success_rate,
+
+        },
+
+        "cost": {
+
+            "total_cost":
+
+                self.total_cost,
+
+            "average_cost_per_token":
+
+                self.average_cost_per_token,
+
+        },
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete analytics.
+    """
+
+    return {
+
+        "analytics":
+
+            self.to_dict(),
+
+        "summary":
+
+            self.summary(),
+
+        "report":
+
+            self.report(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# Reset Analytics
+# ======================================================
+
+def reset(
+    self,
+) -> None:
+    """
+    Reset all analytics values.
+    """
+
+    self.session_count = 0
+
+    self.message_count = 0
+
+    self.document_count = 0
+
+    self.chunk_count = 0
+
+    self.total_tokens = 0
+
+    self.total_cost = 0.0
+
+    self.average_latency_ms = 0.0
+
+    self.retrieval_count = 0
+
+    self.successful_queries = 0
+
+    self.failed_queries = 0
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Has Data
+# ======================================================
+
+@property
+def has_data(
+    self,
+) -> bool:
+    """
+    Whether analytics contains data.
+    """
+
+    return any(
+
+        [
+
+            self.session_count,
+
+            self.message_count,
+
+            self.document_count,
+
+            self.chunk_count,
+
+            self.total_tokens,
+
+            self.total_cost,
+
+            self.retrieval_count,
+
+            self.successful_queries,
+
+            self.failed_queries,
+
+        ]
+
+    )
+
+
+# ======================================================
+# Total Queries
+# ======================================================
+
+@property
+def total_queries(
+    self,
+) -> int:
+    """
+    Total executed queries.
+    """
+
+    return (
+
+        self.successful_queries
+
+        +
+
+        self.failed_queries
+
+    )
