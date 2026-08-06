@@ -1000,3 +1000,585 @@ def advanced_statistics(
             DocumentStatus.EMBEDDED,
 
     }
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize document to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Create From Dictionary
+# ======================================================
+
+@classmethod
+def from_dict(
+    cls,
+    data: Dict[str, Any],
+) -> "Document":
+    """
+    Create Document from dictionary.
+    """
+
+    return cls(
+
+        file_name=data["file_name"],
+
+        file_path=data["file_path"],
+
+        text=data["text"],
+
+        document_type=DocumentType(
+
+            data.get(
+
+                "document_type",
+
+                DocumentType.UNKNOWN,
+
+            )
+
+        ),
+
+        status=DocumentStatus(
+
+            data.get(
+
+                "status",
+
+                DocumentStatus.NEW,
+
+            )
+
+        ),
+
+        metadata=data.get(
+
+            "metadata",
+
+            {},
+
+        ),
+
+        chunks=[
+
+            Chunk.from_dict(
+
+                item
+
+            )
+
+            for item
+
+            in data.get(
+
+                "chunks",
+
+                [],
+
+            )
+
+        ],
+
+        language=data.get(
+
+            "language",
+
+            "unknown",
+
+        ),
+
+        loader=data.get(
+
+            "loader",
+
+            "",
+
+        ),
+
+        version=data.get(
+
+            "version",
+
+            "1.0",
+
+        ),
+
+        embedding_model=data.get(
+
+            "embedding_model",
+
+            "",
+
+        ),
+
+        id=data.get(
+
+            "id",
+
+            str(
+
+                uuid.uuid4()
+
+            ),
+
+        ),
+
+        created_at=datetime.fromisoformat(
+
+            data.get(
+
+                "created_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        updated_at=datetime.fromisoformat(
+
+            data.get(
+
+                "updated_at",
+
+                datetime.utcnow().isoformat(),
+
+            )
+
+        ),
+
+        indexed_at=(
+
+            datetime.fromisoformat(
+
+                data["indexed_at"]
+
+            )
+
+            if data.get(
+
+                "indexed_at"
+
+            )
+
+            else None
+
+        ),
+
+        checksum=data.get(
+
+            "checksum",
+
+            "",
+
+        ),
+
+        tags=data.get(
+
+            "tags",
+
+            [],
+
+        ),
+
+        source=data.get(
+
+            "source",
+
+            "",
+
+        ),
+
+        is_public=data.get(
+
+            "is_public",
+
+            False,
+
+        ),
+
+    )
+
+
+# ======================================================
+# Create From JSON
+# ======================================================
+
+@classmethod
+def from_json(
+    cls,
+    json_string: str,
+) -> "Document":
+    """
+    Create Document from JSON.
+    """
+
+    return cls.from_dict(
+
+        json.loads(
+
+            json_string
+
+        )
+
+    )
+
+
+# ======================================================
+# Clone
+# ======================================================
+
+def clone(
+    self,
+) -> "Document":
+    """
+    Deep copy document.
+    """
+
+    return Document.from_dict(
+
+        self.to_dict()
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "file_name":
+
+            self.file_name,
+
+        "document_type":
+
+            self.document_type.value,
+
+        "status":
+
+            self.status.value,
+
+        "language":
+
+            self.language,
+
+        "chunks":
+
+            self.chunk_count,
+
+        "words":
+
+            self.word_count,
+
+        "characters":
+
+            self.character_count,
+
+        "tags":
+
+            len(
+
+                self.tags
+
+            ),
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Document diagnostics.
+    """
+
+    return {
+
+        "model":
+
+            self.__class__.__name__,
+
+        "id":
+
+            self.id,
+
+        "checksum":
+
+            self.checksum,
+
+        "loader":
+
+            self.loader,
+
+        "version":
+
+            self.version,
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+        "indexed_at":
+
+            self.indexed_at.isoformat()
+
+            if self.indexed_at
+
+            else None,
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete document.
+    """
+
+    return {
+
+        "document":
+
+            self.to_dict(),
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+    }
+
+
+# ======================================================
+# Content Preview
+# ======================================================
+
+@property
+def preview(
+    self,
+) -> str:
+    """
+    Preview document text.
+    """
+
+    if len(
+
+        self.text
+
+    ) <= 500:
+
+        return self.text
+
+    return (
+
+        self.text[:500]
+
+        + "\n..."
+
+    )
+
+
+# ======================================================
+# Analytics
+# ======================================================
+
+def analytics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Comprehensive analytics.
+    """
+
+    average_chunk_size = 0
+
+    if self.chunk_count > 0:
+
+        average_chunk_size = round(
+
+            self.character_count
+
+            /
+
+            self.chunk_count,
+
+            2,
+
+        )
+
+    return {
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "average_chunk_size":
+
+            average_chunk_size,
+
+        "language":
+
+            self.language,
+
+        "embedding_model":
+
+            self.embedding_model,
+
+        "indexed":
+
+            self.status
+
+            ==
+
+            DocumentStatus.INDEXED,
+
+        "embedded":
+
+            self.status
+
+            ==
+
+            DocumentStatus.EMBEDDED,
+
+    }
+
+
+# ======================================================
+# Contains Tag
+# ======================================================
+
+def has_tag(
+    self,
+    tag: str,
+) -> bool:
+    """
+    Check whether tag exists.
+    """
+
+    return (
+
+        tag
+
+        in
+
+        self.tags
+
+    )
+
+
+# ======================================================
+# Is Processed
+# ======================================================
+
+@property
+def is_processed(
+    self,
+) -> bool:
+    """
+    Processed document check.
+    """
+
+    return (
+
+        self.status
+
+        in {
+
+            DocumentStatus.PROCESSED,
+
+            DocumentStatus.INDEXED,
+
+            DocumentStatus.EMBEDDED,
+
+        }
+
+    )
+
+
+# ======================================================
+# Is Searchable
+# ======================================================
+
+@property
+def is_searchable(
+    self,
+) -> bool:
+    """
+    Searchable document.
+    """
+
+    return (
+
+        self.chunk_count
+
+        >
+
+        0
+
+        and
+
+        self.status
+
+        !=
+
+        DocumentStatus.DELETED
+
+    )
