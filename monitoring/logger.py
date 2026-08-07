@@ -1298,3 +1298,381 @@ def has_console_logging(
     """
 
     return self.config.console_logging
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup logger resources.
+    """
+
+    self.flush()
+
+    self.close()
+
+    logging.shutdown()
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    self.info(
+
+        "Logger initialized."
+
+    )
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    if exc_value:
+
+        self.exception(
+
+            str(
+
+                exc_value
+
+            )
+
+        )
+
+    self.cleanup()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "LoggerManager("
+
+        f"name='{self.config.name}', "
+
+        f"level='{self.level}', "
+
+        f"handlers={self.handler_count}"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"{self.config.name} "
+
+        f"Logger "
+
+        f"({self.level})"
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Logger validity.
+    """
+
+    return (
+
+        self.handler_count
+
+        >
+
+        0
+
+    )
+
+
+# ======================================================
+# Singleton Logger
+# ======================================================
+
+_logger_instance: Optional[
+    LoggerManager
+] = None
+
+
+def get_logger(
+    config: Optional[
+        LoggerConfig
+    ] = None,
+) -> LoggerManager:
+    """
+    Return singleton logger.
+    """
+
+    global _logger_instance
+
+    if _logger_instance is None:
+
+        _logger_instance = (
+
+            LoggerManager(
+
+                config
+
+            )
+
+        )
+
+    return _logger_instance
+
+
+# ======================================================
+# Reset Singleton
+# ======================================================
+
+def reset_logger(
+) -> None:
+    """
+    Reset singleton logger.
+    """
+
+    global _logger_instance
+
+    if _logger_instance:
+
+        _logger_instance.cleanup()
+
+    _logger_instance = None
+
+
+# ======================================================
+# Factory Methods
+# ======================================================
+
+@classmethod
+def development(
+    cls,
+) -> "LoggerManager":
+    """
+    Development logger.
+    """
+
+    config = LoggerConfig(
+
+        level=LogLevel.DEBUG,
+
+        console_logging=True,
+
+        file_logging=True,
+
+        json_logging=False,
+
+    )
+
+    return cls(
+
+        config
+
+    )
+
+
+@classmethod
+def production(
+    cls,
+) -> "LoggerManager":
+    """
+    Production logger.
+    """
+
+    config = LoggerConfig(
+
+        level=LogLevel.INFO,
+
+        console_logging=False,
+
+        file_logging=True,
+
+        json_logging=True,
+
+    )
+
+    return cls(
+
+        config
+
+    )
+
+
+@classmethod
+def testing(
+    cls,
+) -> "LoggerManager":
+    """
+    Testing logger.
+    """
+
+    config = LoggerConfig(
+
+        level=LogLevel.DEBUG,
+
+        console_logging=True,
+
+        file_logging=False,
+
+        json_logging=False,
+
+    )
+
+    return cls(
+
+        config
+
+    )
+
+
+# ======================================================
+# Module-Level Logger
+# ======================================================
+
+logger = get_logger()
+
+
+# ======================================================
+# Convenience Functions
+# ======================================================
+
+def debug(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.debug(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
+
+
+def info(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.info(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
+
+
+def warning(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.warning(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
+
+
+def error(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.error(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
+
+
+def critical(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.critical(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
+
+
+def exception(
+    message: str,
+    *args,
+    **kwargs,
+):
+    logger.exception(
+
+        message,
+
+        *args,
+
+        **kwargs,
+
+    )
