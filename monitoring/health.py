@@ -1561,3 +1561,400 @@ def summary(
             ),
 
     }
+
+# ======================================================
+# Start Monitoring
+# ======================================================
+
+def start(
+    self,
+    interval: int = 30,
+) -> None:
+    """
+    Start background monitoring.
+    """
+
+    if getattr(
+
+        self,
+
+        "_running",
+
+        False,
+
+    ):
+
+        return
+
+    self._running = True
+
+    self._interval = interval
+
+    self._thread = threading.Thread(
+
+        target=self._monitor_loop,
+
+        daemon=True,
+
+        name="HealthMonitor",
+
+    )
+
+    self._thread.start()
+
+    logger.info(
+
+        "Health monitoring started."
+
+    )
+
+
+# ======================================================
+# Stop Monitoring
+# ======================================================
+
+def stop(
+    self,
+) -> None:
+    """
+    Stop background monitoring.
+    """
+
+    self._running = False
+
+    logger.info(
+
+        "Health monitoring stopped."
+
+    )
+
+
+# ======================================================
+# Background Loop
+# ======================================================
+
+def _monitor_loop(
+    self,
+) -> None:
+    """
+    Continuous monitoring loop.
+    """
+
+    while self._running:
+
+        try:
+
+            self.check_system()
+
+        except Exception as exc:
+
+            logger.exception(
+
+                "Health monitoring failed: %s",
+
+                exc,
+
+            )
+
+        time.sleep(
+
+            self._interval
+
+        )
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Cleanup monitor.
+    """
+
+    self.stop()
+
+    self.clear_checks()
+
+    logger.info(
+
+        "Health monitor cleaned."
+
+    )
+
+
+# ======================================================
+# Refresh
+# ======================================================
+
+def refresh(
+    self,
+) -> None:
+    """
+    Refresh health report.
+    """
+
+    self.check_system()
+
+    self.touch()
+
+    logger.info(
+
+        "Health report refreshed."
+
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    self.start()
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+
+        "HealthMonitor("
+
+        f"status='{self.report.overall_status.value}', "
+
+        f"checks={self.report.total_checks}"
+
+        ")"
+
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable string.
+    """
+
+    return (
+
+        f"Health: "
+
+        f"{self.report.overall_status.value}"
+
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Healthy monitor.
+    """
+
+    return (
+
+        self.report.overall_status
+
+        !=
+
+        HealthStatus.CRITICAL
+
+    )
+
+
+# ======================================================
+# Singleton
+# ======================================================
+
+_health_monitor: Optional[
+    HealthMonitor
+] = None
+
+
+def get_health_monitor(
+) -> HealthMonitor:
+    """
+    Singleton instance.
+    """
+
+    global _health_monitor
+
+    if _health_monitor is None:
+
+        _health_monitor = (
+
+            HealthMonitor()
+
+        )
+
+    return _health_monitor
+
+
+# ======================================================
+# Reset Singleton
+# ======================================================
+
+def reset_health_monitor(
+) -> None:
+    """
+    Reset singleton.
+    """
+
+    global _health_monitor
+
+    if _health_monitor:
+
+        _health_monitor.cleanup()
+
+    _health_monitor = None
+
+
+# ======================================================
+# Factory Methods
+# ======================================================
+
+@classmethod
+def development(
+    cls,
+) -> "HealthMonitor":
+    """
+    Development monitor.
+    """
+
+    return cls()
+
+
+@classmethod
+def production(
+    cls,
+) -> "HealthMonitor":
+    """
+    Production monitor.
+    """
+
+    return cls()
+
+
+@classmethod
+def testing(
+    cls,
+) -> "HealthMonitor":
+    """
+    Testing monitor.
+    """
+
+    return cls()
+
+
+# ======================================================
+# Convenience Properties
+# ======================================================
+
+@property
+def is_running(
+    self,
+) -> bool:
+    """
+    Monitoring active.
+    """
+
+    return getattr(
+
+        self,
+
+        "_running",
+
+        False,
+
+    )
+
+
+@property
+def uptime_seconds(
+    self,
+) -> float:
+    """
+    Monitor uptime.
+    """
+
+    return (
+
+        datetime.utcnow()
+
+        -
+
+        self.started_at
+
+    ).total_seconds()
+
+
+@property
+def is_healthy(
+    self,
+) -> bool:
+    """
+    Overall healthy.
+    """
+
+    self.update_status()
+
+    return (
+
+        self.report.overall_status
+
+        ==
+
+        HealthStatus.HEALTHY
+
+    )
+
+
+# ======================================================
+# Module Instance
+# ======================================================
+
+health_monitor = (
+
+    get_health_monitor()
+
+)
