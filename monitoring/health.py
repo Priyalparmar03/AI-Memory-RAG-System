@@ -508,3 +508,569 @@ class HealthMonitor:
             ensure_ascii=False,
 
         )
+
+# ======================================================
+# CPU Health
+# ======================================================
+
+def check_cpu(
+    self,
+    warning: float = 75.0,
+    critical: float = 90.0,
+) -> HealthCheck:
+    """
+    Check CPU utilization.
+    """
+
+    usage = psutil.cpu_percent(
+
+        interval=1
+
+    )
+
+    status = HealthStatus.HEALTHY
+
+    if usage >= critical:
+
+        status = HealthStatus.CRITICAL
+
+    elif usage >= warning:
+
+        status = HealthStatus.WARNING
+
+    check = HealthCheck(
+
+        name="CPU",
+
+        status=status,
+
+        message=f"CPU Usage: {usage:.2f}%",
+
+        value=usage,
+
+        threshold=warning,
+
+        metadata={
+
+            "physical_cores":
+
+                psutil.cpu_count(
+
+                    logical=False
+
+                ),
+
+            "logical_cores":
+
+                psutil.cpu_count(
+
+                    logical=True
+
+                ),
+
+        },
+
+    )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Memory Health
+# ======================================================
+
+def check_memory(
+    self,
+    warning: float = 80.0,
+    critical: float = 95.0,
+) -> HealthCheck:
+    """
+    Check RAM usage.
+    """
+
+    memory = psutil.virtual_memory()
+
+    usage = memory.percent
+
+    status = HealthStatus.HEALTHY
+
+    if usage >= critical:
+
+        status = HealthStatus.CRITICAL
+
+    elif usage >= warning:
+
+        status = HealthStatus.WARNING
+
+    check = HealthCheck(
+
+        name="Memory",
+
+        status=status,
+
+        message=f"RAM Usage: {usage:.2f}%",
+
+        value=usage,
+
+        threshold=warning,
+
+        metadata={
+
+            "total":
+
+                memory.total,
+
+            "available":
+
+                memory.available,
+
+            "used":
+
+                memory.used,
+
+            "free":
+
+                memory.free,
+
+        },
+
+    )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Disk Health
+# ======================================================
+
+def check_disk(
+    self,
+    path: str = "/",
+    warning: float = 80.0,
+    critical: float = 95.0,
+) -> HealthCheck:
+    """
+    Check disk usage.
+    """
+
+    usage = shutil.disk_usage(
+
+        path
+
+    )
+
+    percent = round(
+
+        (
+
+            usage.used
+
+            /
+
+            usage.total
+
+        )
+
+        * 100,
+
+        2,
+
+    )
+
+    status = HealthStatus.HEALTHY
+
+    if percent >= critical:
+
+        status = HealthStatus.CRITICAL
+
+    elif percent >= warning:
+
+        status = HealthStatus.WARNING
+
+    check = HealthCheck(
+
+        name="Disk",
+
+        status=status,
+
+        message=f"Disk Usage: {percent:.2f}%",
+
+        value=percent,
+
+        threshold=warning,
+
+        metadata={
+
+            "path":
+
+                path,
+
+            "total":
+
+                usage.total,
+
+            "used":
+
+                usage.used,
+
+            "free":
+
+                usage.free,
+
+        },
+
+    )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Network Health
+# ======================================================
+
+def check_network(
+    self,
+) -> HealthCheck:
+    """
+    Check network interfaces.
+    """
+
+    interfaces = psutil.net_if_stats()
+
+    active = [
+
+        name
+
+        for name, stat
+
+        in interfaces.items()
+
+        if stat.isup
+
+    ]
+
+    status = (
+
+        HealthStatus.HEALTHY
+
+        if active
+
+        else
+
+        HealthStatus.CRITICAL
+
+    )
+
+    check = HealthCheck(
+
+        name="Network",
+
+        status=status,
+
+        message=f"{len(active)} active interface(s)",
+
+        metadata={
+
+            "interfaces":
+
+                active,
+
+        },
+
+    )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# GPU Health
+# ======================================================
+
+def check_gpu(
+    self,
+) -> HealthCheck:
+    """
+    Basic GPU availability check.
+    """
+
+    try:
+
+        import torch
+
+        available = (
+
+            torch.cuda.is_available()
+
+        )
+
+        device_count = (
+
+            torch.cuda.device_count()
+
+            if available
+
+            else 0
+
+        )
+
+        status = (
+
+            HealthStatus.HEALTHY
+
+            if available
+
+            else HealthStatus.WARNING
+
+        )
+
+        check = HealthCheck(
+
+            name="GPU",
+
+            status=status,
+
+            message=(
+
+                "CUDA Available"
+
+                if available
+
+                else
+
+                "GPU Not Available"
+
+            ),
+
+            metadata={
+
+                "device_count":
+
+                    device_count,
+
+            },
+
+        )
+
+    except Exception:
+
+        check = HealthCheck(
+
+            name="GPU",
+
+            status=HealthStatus.UNKNOWN,
+
+            message="PyTorch unavailable.",
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Run All System Checks
+# ======================================================
+
+def check_system(
+    self,
+) -> None:
+    """
+    Execute all local system checks.
+    """
+
+    self.clear_checks()
+
+    self.check_cpu()
+
+    self.check_memory()
+
+    self.check_disk()
+
+    self.check_network()
+
+    self.check_gpu()
+
+    self.update_status()
+
+
+# ======================================================
+# Resource Usage
+# ======================================================
+
+def resource_usage(
+    self,
+) -> Dict[str, Any]:
+    """
+    Resource utilization snapshot.
+    """
+
+    disk = shutil.disk_usage(
+
+        "/"
+
+    )
+
+    memory = psutil.virtual_memory()
+
+    return {
+
+        "cpu_percent":
+
+            psutil.cpu_percent(),
+
+        "memory_percent":
+
+            memory.percent,
+
+        "disk_percent":
+
+            round(
+
+                (
+
+                    disk.used
+
+                    /
+
+                    disk.total
+
+                )
+
+                * 100,
+
+                2,
+
+            ),
+
+        "process_count":
+
+            len(
+
+                psutil.pids()
+
+            ),
+
+        "thread_count":
+
+            threading.active_count(),
+
+    }
+
+
+# ======================================================
+# Advanced Statistics
+# ======================================================
+
+def advanced_statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Advanced health statistics.
+    """
+
+    self.update_status()
+
+    return {
+
+        **self.statistics(),
+
+        "healthy_checks":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.HEALTHY
+
+                ]
+
+            ),
+
+        "warning_checks":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.WARNING
+
+                ]
+
+            ),
+
+        "critical_checks":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.CRITICAL
+
+                ]
+
+            ),
+
+        "resource_usage":
+
+            self.resource_usage(),
+
+    }
