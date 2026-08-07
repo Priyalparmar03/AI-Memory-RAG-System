@@ -453,3 +453,460 @@ class LoggerManager:
             **kwargs,
 
         )
+
+import functools
+import time
+import traceback
+from typing import Callable
+
+
+# ======================================================
+# Structured Logging
+# ======================================================
+
+def structured(
+    self,
+    level: LogLevel,
+    message: str,
+    **fields,
+) -> None:
+    """
+    Structured logging with custom fields.
+    """
+
+    payload = {
+
+        "timestamp":
+
+            datetime.utcnow().isoformat(),
+
+        "message":
+
+            message,
+
+        **fields,
+
+    }
+
+    log_message = json.dumps(
+
+        payload,
+
+        ensure_ascii=False,
+
+    )
+
+    self.logger.log(
+
+        getattr(
+
+            logging,
+
+            level.value,
+
+        ),
+
+        log_message,
+
+    )
+
+
+# ======================================================
+# Context Logging
+# ======================================================
+
+def context(
+    self,
+    message: str,
+    context: Dict[str, Any],
+    level: LogLevel = LogLevel.INFO,
+) -> None:
+    """
+    Log with execution context.
+    """
+
+    self.structured(
+
+        level=level,
+
+        message=message,
+
+        context=context,
+
+    )
+
+
+# ======================================================
+# Request Logging
+# ======================================================
+
+def request(
+    self,
+    method: str,
+    path: str,
+    status_code: int,
+    latency_ms: float,
+    client_ip: str = "",
+    user_id: str = "",
+) -> None:
+    """
+    Log HTTP/API requests.
+    """
+
+    self.structured(
+
+        level=LogLevel.INFO,
+
+        message="HTTP Request",
+
+        method=method,
+
+        path=path,
+
+        status=status_code,
+
+        latency_ms=round(
+
+            latency_ms,
+
+            2,
+
+        ),
+
+        client_ip=client_ip,
+
+        user_id=user_id,
+
+    )
+
+
+# ======================================================
+# RAG Retrieval Logging
+# ======================================================
+
+def rag(
+    self,
+    query: str,
+    retrieved_chunks: int,
+    latency_ms: float,
+) -> None:
+    """
+    Log RAG retrieval.
+    """
+
+    self.structured(
+
+        level=LogLevel.INFO,
+
+        message="RAG Retrieval",
+
+        query=query,
+
+        retrieved_chunks=retrieved_chunks,
+
+        latency_ms=round(
+
+            latency_ms,
+
+            2,
+
+        ),
+
+    )
+
+
+# ======================================================
+# LLM Logging
+# ======================================================
+
+def llm(
+    self,
+    provider: str,
+    model: str,
+    tokens: int,
+    cost: float,
+    latency_ms: float,
+) -> None:
+    """
+    Log LLM inference.
+    """
+
+    self.structured(
+
+        level=LogLevel.INFO,
+
+        message="LLM Inference",
+
+        provider=provider,
+
+        model=model,
+
+        tokens=tokens,
+
+        cost=cost,
+
+        latency_ms=round(
+
+            latency_ms,
+
+            2,
+
+        ),
+
+    )
+
+
+# ======================================================
+# Exception Logging
+# ======================================================
+
+def log_exception(
+    self,
+    exception: Exception,
+    message: str = "",
+) -> None:
+    """
+    Log complete exception.
+    """
+
+    self.structured(
+
+        level=LogLevel.ERROR,
+
+        message=message or str(
+
+            exception
+
+        ),
+
+        exception_type=type(
+
+            exception
+
+        ).__name__,
+
+        traceback=traceback.format_exc(),
+
+    )
+
+
+# ======================================================
+# Performance Logging
+# ======================================================
+
+def performance(
+    self,
+    operation: str,
+    latency_ms: float,
+    **extra,
+) -> None:
+    """
+    Log performance metrics.
+    """
+
+    self.structured(
+
+        level=LogLevel.INFO,
+
+        message="Performance",
+
+        operation=operation,
+
+        latency_ms=round(
+
+            latency_ms,
+
+            2,
+
+        ),
+
+        **extra,
+
+    )
+
+
+# ======================================================
+# Timer Decorator
+# ======================================================
+
+def timer(
+    self,
+    name: str = "",
+):
+    """
+    Measure execution time.
+    """
+
+    def decorator(
+        func: Callable,
+    ):
+
+        @functools.wraps(
+
+            func
+
+        )
+        def wrapper(
+
+            *args,
+
+            **kwargs,
+
+        ):
+
+            start = time.perf_counter()
+
+            try:
+
+                result = func(
+
+                    *args,
+
+                    **kwargs,
+
+                )
+
+                elapsed = (
+
+                    time.perf_counter()
+
+                    -
+
+                    start
+
+                ) * 1000
+
+                self.performance(
+
+                    operation=
+
+                    name
+
+                    or
+
+                    func.__name__,
+
+                    latency_ms=elapsed,
+
+                )
+
+                return result
+
+            except Exception as exc:
+
+                self.log_exception(
+
+                    exc,
+
+                    message=f"Failed: "
+
+                    f"{func.__name__}",
+
+                )
+
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+# ======================================================
+# Logging Decorator
+# ======================================================
+
+def logged(
+    self,
+    level: LogLevel = LogLevel.INFO,
+):
+    """
+    Automatically log
+    function execution.
+    """
+
+    def decorator(
+        func: Callable,
+    ):
+
+        @functools.wraps(
+
+            func
+
+        )
+        def wrapper(
+
+            *args,
+
+            **kwargs,
+
+        ):
+
+            self.structured(
+
+                level=level,
+
+                message=
+
+                f"Starting "
+
+                f"{func.__name__}",
+
+            )
+
+            result = func(
+
+                *args,
+
+                **kwargs,
+
+            )
+
+            self.structured(
+
+                level=level,
+
+                message=
+
+                f"Finished "
+
+                f"{func.__name__}",
+
+            )
+
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+# ======================================================
+# Audit Logging
+# ======================================================
+
+def audit(
+    self,
+    action: str,
+    actor: str,
+    resource: str,
+    **extra,
+) -> None:
+    """
+    Audit trail logging.
+    """
+
+    self.structured(
+
+        level=LogLevel.INFO,
+
+        message="Audit Event",
+
+        action=action,
+
+        actor=actor,
+
+        resource=resource,
+
+        **extra,
+
+    )
