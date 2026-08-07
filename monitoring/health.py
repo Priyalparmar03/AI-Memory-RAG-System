@@ -1074,3 +1074,490 @@ def advanced_statistics(
             self.resource_usage(),
 
     }
+
+# ======================================================
+# Redis Health
+# ======================================================
+
+def check_redis(
+    self,
+    client: Optional[Any] = None,
+) -> HealthCheck:
+    """
+    Check Redis connection.
+    """
+
+    try:
+
+        if client is None:
+
+            raise RuntimeError(
+
+                "Redis client not configured."
+
+            )
+
+        client.ping()
+
+        check = HealthCheck(
+
+            name="Redis",
+
+            status=HealthStatus.HEALTHY,
+
+            message="Redis connection successful.",
+
+        )
+
+    except Exception as exc:
+
+        check = HealthCheck(
+
+            name="Redis",
+
+            status=HealthStatus.CRITICAL,
+
+            message=str(exc),
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# PostgreSQL Health
+# ======================================================
+
+def check_postgresql(
+    self,
+    connection: Optional[Any] = None,
+) -> HealthCheck:
+    """
+    Check PostgreSQL connection.
+    """
+
+    try:
+
+        if connection is None:
+
+            raise RuntimeError(
+
+                "Database connection unavailable."
+
+            )
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+
+            "SELECT 1"
+
+        )
+
+        cursor.fetchone()
+
+        cursor.close()
+
+        check = HealthCheck(
+
+            name="PostgreSQL",
+
+            status=HealthStatus.HEALTHY,
+
+            message="Database connection successful.",
+
+        )
+
+    except Exception as exc:
+
+        check = HealthCheck(
+
+            name="PostgreSQL",
+
+            status=HealthStatus.CRITICAL,
+
+            message=str(exc),
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Vector Database Health
+# ======================================================
+
+def check_vector_database(
+    self,
+    vector_store: Optional[Any] = None,
+) -> HealthCheck:
+    """
+    Check vector database.
+    """
+
+    try:
+
+        if vector_store is None:
+
+            raise RuntimeError(
+
+                "Vector store unavailable."
+
+            )
+
+        if hasattr(
+
+            vector_store,
+
+            "health",
+
+        ):
+
+            vector_store.health()
+
+        check = HealthCheck(
+
+            name="Vector Database",
+
+            status=HealthStatus.HEALTHY,
+
+            message="Vector database operational.",
+
+        )
+
+    except Exception as exc:
+
+        check = HealthCheck(
+
+            name="Vector Database",
+
+            status=HealthStatus.CRITICAL,
+
+            message=str(exc),
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# LLM Provider Health
+# ======================================================
+
+def check_llm(
+    self,
+    provider: Optional[Any] = None,
+) -> HealthCheck:
+    """
+    Check LLM provider.
+    """
+
+    try:
+
+        if provider is None:
+
+            raise RuntimeError(
+
+                "LLM provider unavailable."
+
+            )
+
+        if hasattr(
+
+            provider,
+
+            "health",
+
+        ):
+
+            provider.health()
+
+        check = HealthCheck(
+
+            name="LLM Provider",
+
+            status=HealthStatus.HEALTHY,
+
+            message="LLM provider reachable.",
+
+        )
+
+    except Exception as exc:
+
+        check = HealthCheck(
+
+            name="LLM Provider",
+
+            status=HealthStatus.CRITICAL,
+
+            message=str(exc),
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# API Health
+# ======================================================
+
+def check_api(
+    self,
+    url: str,
+    timeout: int = 5,
+) -> HealthCheck:
+    """
+    Check HTTP API endpoint.
+    """
+
+    try:
+
+        import requests
+
+        response = requests.get(
+
+            url,
+
+            timeout=timeout,
+
+        )
+
+        status = (
+
+            HealthStatus.HEALTHY
+
+            if response.ok
+
+            else HealthStatus.WARNING
+
+        )
+
+        check = HealthCheck(
+
+            name="API",
+
+            status=status,
+
+            message=f"HTTP {response.status_code}",
+
+            value=response.status_code,
+
+            metadata={
+
+                "url":
+
+                    url,
+
+            },
+
+        )
+
+    except Exception as exc:
+
+        check = HealthCheck(
+
+            name="API",
+
+            status=HealthStatus.CRITICAL,
+
+            message=str(exc),
+
+            metadata={
+
+                "url":
+
+                    url,
+
+            },
+
+        )
+
+    self.add_check(
+
+        check
+
+    )
+
+    return check
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Complete diagnostics.
+    """
+
+    self.update_status()
+
+    return {
+
+        "system":
+
+            self.system_information(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "checks":
+
+            [
+
+                check.to_dict()
+
+                for check
+
+                in self.report.checks
+
+            ],
+
+    }
+
+
+# ======================================================
+# Export Health Report
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete health report.
+    """
+
+    return {
+
+        "report":
+
+            self.report.to_dict(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+        "system":
+
+            self.system_information(),
+
+    }
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Human-readable summary.
+    """
+
+    self.update_status()
+
+    return {
+
+        "overall_status":
+
+            self.report.overall_status.value,
+
+        "total_checks":
+
+            self.report.total_checks,
+
+        "healthy":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.HEALTHY
+
+                ]
+
+            ),
+
+        "warnings":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.WARNING
+
+                ]
+
+            ),
+
+        "critical":
+
+            len(
+
+                [
+
+                    c
+
+                    for c
+
+                    in self.report.checks
+
+                    if c.status
+
+                    ==
+
+                    HealthStatus.CRITICAL
+
+                ]
+
+            ),
+
+    }
