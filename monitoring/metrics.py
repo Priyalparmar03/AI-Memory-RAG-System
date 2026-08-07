@@ -528,3 +528,470 @@ class MetricsManager:
                 self.metadata,
 
         }
+
+# ======================================================
+# Counter Operations
+# ======================================================
+
+def increment_counter(
+    self,
+    name: str,
+    amount: float = 1.0,
+    description: str = "",
+) -> Counter:
+    """
+    Increment counter metric.
+    """
+
+    with self.lock:
+
+        if name not in self.counters:
+
+            self.counters[name] = Counter(
+
+                name=name,
+
+                description=description,
+
+            )
+
+        self.counters[name].value += amount
+
+        self.counters[name].touch()
+
+        self.touch()
+
+        return self.counters[name]
+
+
+# ======================================================
+# Gauge Operations
+# ======================================================
+
+def set_gauge(
+    self,
+    name: str,
+    value: float,
+    description: str = "",
+) -> Gauge:
+    """
+    Set gauge metric.
+    """
+
+    with self.lock:
+
+        if name not in self.gauges:
+
+            self.gauges[name] = Gauge(
+
+                name=name,
+
+                description=description,
+
+            )
+
+        self.gauges[name].value = value
+
+        self.gauges[name].touch()
+
+        self.touch()
+
+        return self.gauges[name]
+
+
+# ======================================================
+# Histogram Operations
+# ======================================================
+
+def observe(
+    self,
+    name: str,
+    value: float,
+    description: str = "",
+) -> Histogram:
+    """
+    Record histogram observation.
+    """
+
+    with self.lock:
+
+        if name not in self.histograms:
+
+            self.histograms[name] = Histogram(
+
+                name=name,
+
+                description=description,
+
+            )
+
+        histogram = self.histograms[name]
+
+        histogram.observations.append(
+
+            value
+
+        )
+
+        histogram.value = value
+
+        histogram.touch()
+
+        self.touch()
+
+        return histogram
+
+
+# ======================================================
+# Token Metrics
+# ======================================================
+
+def record_tokens(
+    self,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cost: float = 0.0,
+) -> None:
+    """
+    Record token usage.
+    """
+
+    total = (
+
+        prompt_tokens
+
+        +
+
+        completion_tokens
+
+    )
+
+    self.increment_counter(
+
+        "prompt_tokens",
+
+        prompt_tokens,
+
+    )
+
+    self.increment_counter(
+
+        "completion_tokens",
+
+        completion_tokens,
+
+    )
+
+    self.increment_counter(
+
+        "total_tokens",
+
+        total,
+
+    )
+
+    self.increment_counter(
+
+        "token_cost",
+
+        cost,
+
+    )
+
+
+# ======================================================
+# Latency Metrics
+# ======================================================
+
+def record_latency(
+    self,
+    operation: str,
+    latency_ms: float,
+) -> None:
+    """
+    Record operation latency.
+    """
+
+    self.observe(
+
+        f"{operation}_latency_ms",
+
+        latency_ms,
+
+        description=
+
+        "Operation latency",
+
+    )
+
+
+# ======================================================
+# RAG Metrics
+# ======================================================
+
+def record_rag_query(
+    self,
+    retrieved_chunks: int,
+    reranked_chunks: int = 0,
+) -> None:
+    """
+    Record RAG query.
+    """
+
+    self.increment_counter(
+
+        "rag_queries"
+
+    )
+
+    self.observe(
+
+        "retrieved_chunks",
+
+        retrieved_chunks,
+
+    )
+
+    self.observe(
+
+        "reranked_chunks",
+
+        reranked_chunks,
+
+    )
+
+
+# ======================================================
+# LLM Metrics
+# ======================================================
+
+def record_llm_request(
+    self,
+    provider: str,
+    model: str,
+    latency_ms: float,
+    tokens: int,
+) -> None:
+    """
+    Record LLM request.
+    """
+
+    self.increment_counter(
+
+        "llm_requests"
+
+    )
+
+    self.increment_counter(
+
+        f"{provider}_requests"
+
+    )
+
+    self.increment_counter(
+
+        f"{model}_requests"
+
+    )
+
+    self.record_latency(
+
+        "llm",
+
+        latency_ms,
+
+    )
+
+    self.increment_counter(
+
+        "llm_tokens",
+
+        tokens,
+
+    )
+
+
+# ======================================================
+# System Metrics
+# ======================================================
+
+def update_system_metrics(
+    self,
+    cpu: float,
+    memory: float,
+    disk: float,
+) -> None:
+    """
+    Update system gauges.
+    """
+
+    self.set_gauge(
+
+        "cpu_usage",
+
+        cpu,
+
+    )
+
+    self.set_gauge(
+
+        "memory_usage",
+
+        memory,
+
+    )
+
+    self.set_gauge(
+
+        "disk_usage",
+
+        disk,
+
+    )
+
+
+# ======================================================
+# Get Counter
+# ======================================================
+
+def get_counter(
+    self,
+    name: str,
+) -> Optional[Counter]:
+    """
+    Retrieve counter.
+    """
+
+    return self.counters.get(
+
+        name
+
+    )
+
+
+# ======================================================
+# Get Gauge
+# ======================================================
+
+def get_gauge(
+    self,
+    name: str,
+) -> Optional[Gauge]:
+    """
+    Retrieve gauge.
+    """
+
+    return self.gauges.get(
+
+        name
+
+    )
+
+
+# ======================================================
+# Get Histogram
+# ======================================================
+
+def get_histogram(
+    self,
+    name: str,
+) -> Optional[Histogram]:
+    """
+    Retrieve histogram.
+    """
+
+    return self.histograms.get(
+
+        name
+
+    )
+
+
+# ======================================================
+# Advanced Statistics
+# ======================================================
+
+def advanced_statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Comprehensive metrics statistics.
+    """
+
+    counter_total = sum(
+
+        metric.value
+
+        for metric
+
+        in self.counters.values()
+
+    )
+
+    gauge_average = (
+
+        mean(
+
+            [
+
+                g.value
+
+                for g
+
+                in self.gauges.values()
+
+            ]
+
+        )
+
+        if self.gauges
+
+        else 0
+
+    )
+
+    histogram_samples = sum(
+
+        len(
+
+            h.observations
+
+        )
+
+        for h
+
+        in self.histograms.values()
+
+    )
+
+    return {
+
+        **self.statistics(),
+
+        "counter_total":
+
+            counter_total,
+
+        "average_gauge":
+
+            round(
+
+                gauge_average,
+
+                2,
+
+            ),
+
+        "histogram_samples":
+
+            histogram_samples,
+
+        "metadata_entries":
+
+            len(
+
+                self.metadata
+
+            ),
+
+    }
