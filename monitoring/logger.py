@@ -910,3 +910,391 @@ def audit(
         **extra,
 
     )
+
+# ======================================================
+# Get Logger Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Return logger statistics.
+    """
+
+    return {
+
+        "name":
+
+            self.logger.name,
+
+        "level":
+
+            logging.getLevelName(
+
+                self.logger.level
+
+            ),
+
+        "handlers":
+
+            len(
+
+                self.logger.handlers
+
+            ),
+
+        "propagate":
+
+            self.logger.propagate,
+
+        "log_directory":
+
+            self.config.log_directory,
+
+        "log_file":
+
+            self.config.file_name,
+
+        "json_logging":
+
+            self.config.json_logging,
+
+        "console_logging":
+
+            self.config.console_logging,
+
+        "file_logging":
+
+            self.config.file_logging,
+
+    }
+
+
+# ======================================================
+# Change Log Level
+# ======================================================
+
+def set_level(
+    self,
+    level: LogLevel,
+) -> None:
+    """
+    Change logger level.
+    """
+
+    self.logger.setLevel(
+
+        getattr(
+
+            logging,
+
+            level.value,
+
+        )
+
+    )
+
+    self.info(
+
+        f"Logger level changed "
+
+        f"to {level.value}"
+
+    )
+
+
+# ======================================================
+# Get Current Log Level
+# ======================================================
+
+@property
+def level(
+    self,
+) -> str:
+    """
+    Current log level.
+    """
+
+    return logging.getLevelName(
+
+        self.logger.level
+
+    )
+
+
+# ======================================================
+# Add Filter
+# ======================================================
+
+def add_filter(
+    self,
+    log_filter: logging.Filter,
+) -> None:
+    """
+    Add logging filter.
+    """
+
+    self.logger.addFilter(
+
+        log_filter
+
+    )
+
+
+# ======================================================
+# Remove Filter
+# ======================================================
+
+def remove_filter(
+    self,
+    log_filter: logging.Filter,
+) -> None:
+    """
+    Remove logging filter.
+    """
+
+    self.logger.removeFilter(
+
+        log_filter
+
+    )
+
+
+# ======================================================
+# Get Child Logger
+# ======================================================
+
+def child(
+    self,
+    name: str,
+) -> logging.Logger:
+    """
+    Create child logger.
+    """
+
+    return self.logger.getChild(
+
+        name
+
+    )
+
+
+# ======================================================
+# Flush Handlers
+# ======================================================
+
+def flush(
+    self,
+) -> None:
+    """
+    Flush all handlers.
+    """
+
+    for handler in self.logger.handlers:
+
+        handler.flush()
+
+
+# ======================================================
+# Close Handlers
+# ======================================================
+
+def close(
+    self,
+) -> None:
+    """
+    Close all handlers.
+    """
+
+    for handler in self.logger.handlers:
+
+        handler.close()
+
+
+# ======================================================
+# Export Configuration
+# ======================================================
+
+def export_config(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export logger configuration.
+    """
+
+    return {
+
+        "name":
+
+            self.config.name,
+
+        "level":
+
+            self.config.level.value,
+
+        "format":
+
+            self.config.log_format.value,
+
+        "directory":
+
+            self.config.log_directory,
+
+        "file":
+
+            self.config.file_name,
+
+        "max_bytes":
+
+            self.config.max_bytes,
+
+        "backup_count":
+
+            self.config.backup_count,
+
+        "console_logging":
+
+            self.config.console_logging,
+
+        "file_logging":
+
+            self.config.file_logging,
+
+        "json_logging":
+
+            self.config.json_logging,
+
+        "encoding":
+
+            self.config.encoding,
+
+    }
+
+
+# ======================================================
+# Reload Configuration
+# ======================================================
+
+def reload(
+    self,
+) -> None:
+    """
+    Reload logger configuration.
+    """
+
+    self.close()
+
+    self._configure()
+
+    self.info(
+
+        "Logger reloaded."
+
+    )
+
+
+# ======================================================
+# Is Debug Enabled
+# ======================================================
+
+@property
+def is_debug(
+    self,
+) -> bool:
+    """
+    Debug mode enabled.
+    """
+
+    return (
+
+        self.logger.level
+
+        ==
+
+        logging.DEBUG
+
+    )
+
+
+# ======================================================
+# Is JSON Logger
+# ======================================================
+
+@property
+def is_json(
+    self,
+) -> bool:
+    """
+    JSON logging enabled.
+    """
+
+    return self.config.json_logging
+
+
+# ======================================================
+# Log File Path
+# ======================================================
+
+@property
+def log_file(
+    self,
+) -> Path:
+    """
+    Full log file path.
+    """
+
+    return Path(
+
+        self.config.log_directory
+
+    ) / self.config.file_name
+
+
+# ======================================================
+# Handler Count
+# ======================================================
+
+@property
+def handler_count(
+    self,
+) -> int:
+    """
+    Number of active handlers.
+    """
+
+    return len(
+
+        self.logger.handlers
+
+    )
+
+
+# ======================================================
+# Has File Logging
+# ======================================================
+
+@property
+def has_file_logging(
+    self,
+) -> bool:
+    """
+    Whether file logging is enabled.
+    """
+
+    return self.config.file_logging
+
+
+# ======================================================
+# Has Console Logging
+# ======================================================
+
+@property
+def has_console_logging(
+    self,
+) -> bool:
+    """
+    Whether console logging is enabled.
+    """
+
+    return self.config.console_logging
