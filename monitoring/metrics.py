@@ -995,3 +995,477 @@ def advanced_statistics(
             ),
 
     }
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize metrics to JSON.
+    """
+
+    return json.dumps(
+
+        self.to_dict(),
+
+        indent=indent,
+
+        ensure_ascii=False,
+
+    )
+
+
+# ======================================================
+# Summary
+# ======================================================
+
+def summary(
+    self,
+) -> Dict[str, Any]:
+    """
+    Metrics summary.
+    """
+
+    return {
+
+        "id":
+
+            self.id,
+
+        "total_metrics":
+
+            (
+
+                len(
+
+                    self.counters
+
+                )
+
+                +
+
+                len(
+
+                    self.gauges
+
+                )
+
+                +
+
+                len(
+
+                    self.histograms
+
+                )
+
+            ),
+
+        "counters":
+
+            len(
+
+                self.counters
+
+            ),
+
+        "gauges":
+
+            len(
+
+                self.gauges
+
+            ),
+
+        "histograms":
+
+            len(
+
+                self.histograms
+
+            ),
+
+        "created_at":
+
+            self.created_at.isoformat(),
+
+        "updated_at":
+
+            self.updated_at.isoformat(),
+
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Complete diagnostics.
+    """
+
+    return {
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "metadata":
+
+            self.metadata,
+
+    }
+
+
+# ======================================================
+# Prometheus Export
+# ======================================================
+
+def prometheus(
+    self,
+) -> str:
+    """
+    Export metrics in Prometheus format.
+    """
+
+    lines = []
+
+    for metric in self.counters.values():
+
+        lines.append(
+
+            f"# TYPE {metric.name} counter"
+
+        )
+
+        lines.append(
+
+            f"{metric.name} {metric.value}"
+
+        )
+
+    for metric in self.gauges.values():
+
+        lines.append(
+
+            f"# TYPE {metric.name} gauge"
+
+        )
+
+        lines.append(
+
+            f"{metric.name} {metric.value}"
+
+        )
+
+    for metric in self.histograms.values():
+
+        lines.append(
+
+            f"# TYPE {metric.name} histogram"
+
+        )
+
+        lines.append(
+
+            f"{metric.name}_count "
+
+            f"{len(metric.observations)}"
+
+        )
+
+        lines.append(
+
+            f"{metric.name}_sum "
+
+            f"{sum(metric.observations)}"
+
+        )
+
+    return "\n".join(
+
+        lines
+
+    )
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete metrics.
+    """
+
+    return {
+
+        "summary":
+
+            self.summary(),
+
+        "statistics":
+
+            self.advanced_statistics(),
+
+        "diagnostics":
+
+            self.diagnostics(),
+
+        "metrics":
+
+            self.to_dict(),
+
+    }
+
+
+# ======================================================
+# Search Metrics
+# ======================================================
+
+def search(
+    self,
+    keyword: str,
+) -> Dict[str, Metric]:
+    """
+    Search metrics by name.
+    """
+
+    keyword = keyword.lower()
+
+    results = {}
+
+    for collection in (
+
+        self.counters,
+
+        self.gauges,
+
+        self.histograms,
+
+    ):
+
+        for name, metric in collection.items():
+
+            if keyword in name.lower():
+
+                results[name] = metric
+
+    return results
+
+
+# ======================================================
+# Filter Metrics
+# ======================================================
+
+def filter_type(
+    self,
+    metric_type: MetricType,
+):
+    """
+    Return metrics by type.
+    """
+
+    if metric_type == MetricType.COUNTER:
+
+        return self.counters
+
+    if metric_type == MetricType.GAUGE:
+
+        return self.gauges
+
+    if metric_type == MetricType.HISTOGRAM:
+
+        return self.histograms
+
+    return {}
+
+
+# ======================================================
+# Reset Metrics
+# ======================================================
+
+def reset(
+    self,
+) -> None:
+    """
+    Clear all metrics.
+    """
+
+    self.counters.clear()
+
+    self.gauges.clear()
+
+    self.histograms.clear()
+
+    self.metadata.clear()
+
+    self.touch()
+
+
+# ======================================================
+# Remove Metric
+# ======================================================
+
+def remove_metric(
+    self,
+    name: str,
+) -> bool:
+    """
+    Remove metric.
+    """
+
+    if name in self.counters:
+
+        del self.counters[
+
+            name
+
+        ]
+
+        self.touch()
+
+        return True
+
+    if name in self.gauges:
+
+        del self.gauges[
+
+            name
+
+        ]
+
+        self.touch()
+
+        return True
+
+    if name in self.histograms:
+
+        del self.histograms[
+
+            name
+
+        ]
+
+        self.touch()
+
+        return True
+
+    return False
+
+
+# ======================================================
+# Metric Exists
+# ======================================================
+
+def exists(
+    self,
+    name: str,
+) -> bool:
+    """
+    Check whether metric exists.
+    """
+
+    return (
+
+        name
+
+        in
+
+        self.counters
+
+        or
+
+        name
+
+        in
+
+        self.gauges
+
+        or
+
+        name
+
+        in
+
+        self.histograms
+
+    )
+
+
+# ======================================================
+# Total Observations
+# ======================================================
+
+@property
+def total_observations(
+    self,
+) -> int:
+    """
+    Total histogram observations.
+    """
+
+    return sum(
+
+        len(
+
+            histogram.observations
+
+        )
+
+        for histogram
+
+        in self.histograms.values()
+
+    )
+
+
+# ======================================================
+# Has Metrics
+# ======================================================
+
+@property
+def has_metrics(
+    self,
+) -> bool:
+    """
+    Whether manager contains metrics.
+    """
+
+    return (
+
+        len(
+
+            self.counters
+
+        )
+
+        +
+
+        len(
+
+            self.gauges
+
+        )
+
+        +
+
+        len(
+
+            self.histograms
+
+        )
+
+    ) > 0
