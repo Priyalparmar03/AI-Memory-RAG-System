@@ -1,25 +1,7 @@
-"""
-services/embedding_service.py
-
-Embedding Service
------------------
-Responsibilities:
-- Load embedding models
-- Generate query embeddings
-- Generate document embeddings
-- Batch embedding support
-- GPU/CPU auto detection
-- Embedding normalization
-- Model metadata
-- Singleton model loading
-"""
-
 from __future__ import annotations
-
 import logging
 import threading
 from typing import List, Optional, Dict, Union
-
 import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
