@@ -1,19 +1,3 @@
-"""
-services/document_service.py
-
-Production Document Service
-
-Responsibilities
-----------------
-- Validate uploaded documents
-- Save documents
-- Detect file type
-- Extract text
-- Extract metadata
-- Generate checksums
-- Prepare documents for chunking
-"""
-
 from __future__ import annotations
 import re
 from langchain_text_splitters import RecursiveCharacterTextSplitter
