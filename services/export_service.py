@@ -1,18 +1,3 @@
-"""
-services/export_service.py
-
-Production Export Service
-
-Responsibilities
-----------------
-- Conversation Export
-- Analytics Export
-- Memory Export
-- RAG Export
-- Backup
-- Reports
-"""
-
 from __future__ import annotations
 import zipfile
 import shutil
