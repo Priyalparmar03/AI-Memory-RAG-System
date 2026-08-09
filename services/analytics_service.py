@@ -1,20 +1,4 @@
-"""
-services/analytics_service.py
-
-Production Analytics Service
-
-Responsibilities
-----------------
-- Chat Analytics
-- Token Usage
-- Response Latency
-- Model Usage
-- Cost Tracking
-- Dashboard Metrics
-"""
-
 from __future__ import annotations
-
 import logging
 import sqlite3
 import uuid
@@ -26,20 +10,16 @@ logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
-
     DATABASE_NAME = "analytics.db"
-
     def __init__(
         self,
         database_path: str = "./database",
     ):
-
         self.database_path = Path(database_path)
         self.database_path.mkdir(
             parents=True,
             exist_ok=True,
         )
-
         self.database = (
             self.database_path /
             self.DATABASE_NAME
@@ -63,9 +43,7 @@ class AnalyticsService:
     # =====================================================
 
     def _initialize_database(self):
-
         cursor = self.connection.cursor()
-
         cursor.execute("""
 
         CREATE TABLE IF NOT EXISTS chat_events(
