@@ -1,19 +1,3 @@
-"""
-services/chat_service.py
-
-Production Chat Service
-
-Responsibilities
-----------------
-- Chat orchestration
-- Conversation lifecycle
-- Memory retrieval
-- RAG retrieval
-- Prompt construction
-- LLM interaction
-- Response persistence
-"""
-
 from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List
