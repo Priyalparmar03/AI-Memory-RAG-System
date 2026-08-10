@@ -1,20 +1,4 @@
-"""
-services/rag_service.py
-
-Production RAG Service
-
-Responsibilities
-----------------
-- Vector database management
-- Document indexing
-- Semantic retrieval
-- Metadata filtering
-- Context construction
-- Source tracking
-"""
-
 from __future__ import annotations
-
 import logging
 import uuid
 from pathlib import Path
