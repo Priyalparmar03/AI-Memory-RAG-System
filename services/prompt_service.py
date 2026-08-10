@@ -1,22 +1,4 @@
-"""
-services/prompt_service.py
-
-Prompt Engineering Service
-
-Responsibilities
-----------------
-- Build chat prompts
-- Build RAG prompts
-- Manage system prompts
-- Inject conversation history
-- Inject retrieved context
-- Prompt templates
-- Personas
-- Safety instructions
-"""
-
 from __future__ import annotations
-
 import logging
 from datetime import datetime
 from enum import Enum
