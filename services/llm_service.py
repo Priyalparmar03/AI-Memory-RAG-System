@@ -1,15 +1,3 @@
-"""
-services/llm_service.py
-
-Unified LLM Service
-
-Supports:
-- Google Gemini
-- OpenAI
-- Future Providers
-
-"""
-
 from __future__ import annotations
 
 import logging
