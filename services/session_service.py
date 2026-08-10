@@ -1,18 +1,4 @@
-"""
-services/session_service.py
-
-Production Session Service
-
-Responsibilities
-----------------
-- User Session Management
-- JWT Session Tracking
-- Active Session Management
-- User Activity Tracking
-"""
-
 from __future__ import annotations
-
 import logging
 import sqlite3
 import uuid
