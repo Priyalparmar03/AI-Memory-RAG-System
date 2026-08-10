@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Generator, Optional
-
 import google.generativeai as genai
 from openai import OpenAI
-
 from app.config import Config
 
 logger = logging.getLogger(__name__)
