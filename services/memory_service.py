@@ -1,18 +1,3 @@
-"""
-services/memory_service.py
-
-Production Memory Service
-
-Responsibilities
-----------------
-- Conversation Management
-- Session Management
-- Message Storage
-- Short-Term Memory
-- Long-Term Memory (later)
-- Memory Search (later)
-"""
-
 from __future__ import annotations
 from collections import deque
 from typing import Any
