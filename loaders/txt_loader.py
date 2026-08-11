@@ -14,10 +14,6 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 
 class TXTLoader(BaseLoader):
-    """
-    Production TXT Loader.
-    """
-
     SUPPORTED_EXTENSIONS = [
         ".txt",
         ".text",
