@@ -611,3 +611,518 @@ class Tracer:
             indent=indent,
             ensure_ascii=False,
         )
+
+# ======================================================
+# Get Trace
+# ======================================================
+
+def get_trace(
+    self,
+    trace_id: str,
+) -> Optional[Trace]:
+    """
+    Retrieve a trace by ID.
+    """
+
+    return self.traces.get(trace_id)
+
+
+# ======================================================
+# Get Span
+# ======================================================
+
+def get_span(
+    self,
+    span_id: str,
+) -> Optional[Span]:
+    """
+    Retrieve an active span by ID.
+    """
+
+    return self.active_spans.get(span_id)
+
+
+# ======================================================
+# End Span
+# ======================================================
+
+def end_span(
+    self,
+    span: Span,
+    status: TraceStatus = TraceStatus.OK,
+) -> None:
+    """
+    End and unregister a span.
+    """
+
+    with self.lock:
+
+        span.end(status)
+
+        self.active_spans.pop(
+            span.span_id,
+            None,
+        )
+
+        self.touch()
+
+
+# ======================================================
+# End Trace
+# ======================================================
+
+def end_trace(
+    self,
+    trace: Trace,
+    status: TraceStatus = TraceStatus.OK,
+) -> None:
+    """
+    End a trace.
+    """
+
+    with self.lock:
+
+        trace.end(status)
+
+        for span in trace.spans:
+
+            self.active_spans.pop(
+                span.span_id,
+                None,
+            )
+
+        self.touch()
+
+
+# ======================================================
+# Set Span Attribute
+# ======================================================
+
+def set_attribute(
+    self,
+    span: Span,
+    key: str,
+    value: Any,
+) -> None:
+    """
+    Set an attribute on a span.
+    """
+
+    with self.lock:
+
+        span.set_attribute(
+            key,
+            value,
+        )
+
+        self.touch()
+
+
+# ======================================================
+# Set Span Status
+# ======================================================
+
+def set_status(
+    self,
+    span: Span,
+    status: TraceStatus,
+    error: Optional[str] = None,
+) -> None:
+    """
+    Set span status.
+    """
+
+    with self.lock:
+
+        span.set_status(
+            status,
+            error,
+        )
+
+        self.touch()
+
+
+# ======================================================
+# Add Span Event
+# ======================================================
+
+def add_event(
+    self,
+    span: Span,
+    name: str,
+    attributes: Optional[
+        Dict[str, Any]
+    ] = None,
+) -> None:
+    """
+    Add an event to a span.
+    """
+
+    with self.lock:
+
+        span.add_event(
+            name,
+            attributes,
+        )
+
+        self.touch()
+
+
+# ======================================================
+# Exception Tracing
+# ======================================================
+
+def record_exception(
+    self,
+    span: Span,
+    exception: Exception,
+) -> None:
+    """
+    Record an exception on a span.
+    """
+
+    error_message = str(exception)
+
+    span.set_status(
+        TraceStatus.ERROR,
+        error_message,
+    )
+
+    span.add_event(
+        "exception",
+        {
+            "exception_type":
+                type(exception).__name__,
+            "message":
+                error_message,
+        },
+    )
+
+    self.touch()
+
+
+# ======================================================
+# LLM Tracing
+# ======================================================
+
+def trace_llm(
+    self,
+    trace: Trace,
+    model: str,
+    provider: str,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    temperature: Optional[float] = None,
+) -> Span:
+    """
+    Create an LLM tracing span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name="llm.generate",
+        span_type=SpanType.LLM,
+    )
+
+    span.attributes.update(
+        {
+            "llm.model": model,
+            "llm.provider": provider,
+            "llm.prompt_tokens": prompt_tokens,
+            "llm.completion_tokens":
+                completion_tokens,
+            "llm.total_tokens":
+                prompt_tokens + completion_tokens,
+        }
+    )
+
+    if temperature is not None:
+
+        span.attributes[
+            "llm.temperature"
+        ] = temperature
+
+    return span
+
+
+# ======================================================
+# RAG Tracing
+# ======================================================
+
+def trace_rag(
+    self,
+    trace: Trace,
+    query: str,
+    retrieved_chunks: int = 0,
+    reranked_chunks: int = 0,
+) -> Span:
+    """
+    Create a RAG tracing span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name="rag.query",
+        span_type=SpanType.RAG,
+    )
+
+    span.attributes.update(
+        {
+            "rag.query":
+                query,
+            "rag.retrieved_chunks":
+                retrieved_chunks,
+            "rag.reranked_chunks":
+                reranked_chunks,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Memory Tracing
+# ======================================================
+
+def trace_memory(
+    self,
+    trace: Trace,
+    operation: str,
+    memory_type: str = "",
+    memory_id: str = "",
+) -> Span:
+    """
+    Create a memory operation span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name=f"memory.{operation}",
+        span_type=SpanType.MEMORY,
+    )
+
+    span.attributes.update(
+        {
+            "memory.operation":
+                operation,
+            "memory.type":
+                memory_type,
+            "memory.id":
+                memory_id,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Retrieval Tracing
+# ======================================================
+
+def trace_retrieval(
+    self,
+    trace: Trace,
+    query: str,
+    top_k: int = 0,
+    collection: str = "",
+) -> Span:
+    """
+    Create a retrieval span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name="retrieval.search",
+        span_type=SpanType.RETRIEVAL,
+    )
+
+    span.attributes.update(
+        {
+            "retrieval.query":
+                query,
+            "retrieval.top_k":
+                top_k,
+            "retrieval.collection":
+                collection,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Embedding Tracing
+# ======================================================
+
+def trace_embedding(
+    self,
+    trace: Trace,
+    model: str,
+    input_count: int = 0,
+    dimensions: int = 0,
+) -> Span:
+    """
+    Create an embedding span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name="embedding.generate",
+        span_type=SpanType.EMBEDDING,
+    )
+
+    span.attributes.update(
+        {
+            "embedding.model":
+                model,
+            "embedding.input_count":
+                input_count,
+            "embedding.dimensions":
+                dimensions,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Reranking Tracing
+# ======================================================
+
+def trace_reranking(
+    self,
+    trace: Trace,
+    model: str,
+    candidate_count: int = 0,
+    top_k: int = 0,
+) -> Span:
+    """
+    Create a reranking span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name="reranking.rank",
+        span_type=SpanType.RERANKING,
+    )
+
+    span.attributes.update(
+        {
+            "reranking.model":
+                model,
+            "reranking.candidates":
+                candidate_count,
+            "reranking.top_k":
+                top_k,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Tool Tracing
+# ======================================================
+
+def trace_tool(
+    self,
+    trace: Trace,
+    tool_name: str,
+    arguments: Optional[
+        Dict[str, Any]
+    ] = None,
+) -> Span:
+    """
+    Create a tool execution span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name=f"tool.{tool_name}",
+        span_type=SpanType.TOOL,
+    )
+
+    span.attributes.update(
+        {
+            "tool.name":
+                tool_name,
+            "tool.arguments":
+                arguments or {},
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# Database Tracing
+# ======================================================
+
+def trace_database(
+    self,
+    trace: Trace,
+    operation: str,
+    database: str = "",
+    table: str = "",
+) -> Span:
+    """
+    Create a database operation span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name=f"database.{operation}",
+        span_type=SpanType.DATABASE,
+    )
+
+    span.attributes.update(
+        {
+            "db.operation":
+                operation,
+            "db.name":
+                database,
+            "db.table":
+                table,
+        }
+    )
+
+    return span
+
+
+# ======================================================
+# HTTP Tracing
+# ======================================================
+
+def trace_http(
+    self,
+    trace: Trace,
+    method: str,
+    url: str,
+    status_code: Optional[int] = None,
+) -> Span:
+    """
+    Create an HTTP request span.
+    """
+
+    span = self.start_span(
+        trace=trace,
+        name=f"http.{method.lower()}",
+        span_type=SpanType.HTTP,
+    )
+
+    span.attributes.update(
+        {
+            "http.method":
+                method,
+            "http.url":
+                url,
+        }
+    )
+
+    if status_code is not None:
+
+        span.attributes[
+            "http.status_code"
+        ] = status_code
+
+    return span
