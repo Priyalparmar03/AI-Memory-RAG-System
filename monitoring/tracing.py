@@ -1126,3 +1126,602 @@ def trace_http(
         ] = status_code
 
     return span
+
+# ======================================================
+# Trace Statistics
+# ======================================================
+
+def statistics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Return tracer statistics.
+    """
+
+    with self.lock:
+
+        total_spans = sum(
+            len(trace.spans)
+            for trace in self.traces.values()
+        )
+
+        completed_spans = sum(
+            1
+            for trace in self.traces.values()
+            for span in trace.spans
+            if span.is_finished
+        )
+
+        error_spans = sum(
+            1
+            for trace in self.traces.values()
+            for span in trace.spans
+            if span.status == TraceStatus.ERROR
+        )
+
+        return {
+            "service_name":
+                self.service_name,
+
+            "trace_count":
+                len(self.traces),
+
+            "span_count":
+                total_spans,
+
+            "active_spans":
+                len(self.active_spans),
+
+            "completed_spans":
+                completed_spans,
+
+            "error_spans":
+                error_spans,
+
+            "created_at":
+                self.created_at.isoformat(),
+
+            "updated_at":
+                self.updated_at.isoformat(),
+        }
+
+
+# ======================================================
+# Trace Summary
+# ======================================================
+
+def trace_summary(
+    self,
+    trace_id: str,
+) -> Dict[str, Any]:
+    """
+    Return a summary for a specific trace.
+    """
+
+    trace = self.get_trace(trace_id)
+
+    if trace is None:
+
+        raise TracingError(
+            f"Trace not found: {trace_id}"
+        )
+
+    durations = [
+        span.duration_ms
+        for span in trace.spans
+    ]
+
+    return {
+        "trace_id":
+            trace.trace_id,
+
+        "name":
+            trace.name,
+
+        "status":
+            trace.status.value,
+
+        "span_count":
+            len(trace.spans),
+
+        "completed_spans":
+            sum(
+                1
+                for span in trace.spans
+                if span.is_finished
+            ),
+
+        "error_spans":
+            sum(
+                1
+                for span in trace.spans
+                if span.status == TraceStatus.ERROR
+            ),
+
+        "duration_ms":
+            trace.duration_ms,
+
+        "average_span_duration_ms":
+            (
+                sum(durations) / len(durations)
+                if durations
+                else 0.0
+            ),
+
+        "start_time":
+            trace.start_time.isoformat(),
+
+        "end_time":
+            (
+                trace.end_time.isoformat()
+                if trace.end_time
+                else None
+            ),
+    }
+
+
+# ======================================================
+# Span Search
+# ======================================================
+
+def search_spans(
+    self,
+    keyword: str,
+) -> List[Span]:
+    """
+    Search spans by name or attributes.
+    """
+
+    keyword = keyword.lower()
+
+    results = []
+
+    for trace in self.traces.values():
+
+        for span in trace.spans:
+
+            if keyword in span.name.lower():
+
+                results.append(span)
+
+                continue
+
+            attributes = json.dumps(
+                span.attributes,
+                default=str,
+            ).lower()
+
+            if keyword in attributes:
+
+                results.append(span)
+
+    return results
+
+
+# ======================================================
+# Trace Search
+# ======================================================
+
+def search_traces(
+    self,
+    keyword: str,
+) -> List[Trace]:
+    """
+    Search traces by name or metadata.
+    """
+
+    keyword = keyword.lower()
+
+    results = []
+
+    for trace in self.traces.values():
+
+        if keyword in trace.name.lower():
+
+            results.append(trace)
+
+            continue
+
+        metadata = json.dumps(
+            trace.metadata,
+            default=str,
+        ).lower()
+
+        if keyword in metadata:
+
+            results.append(trace)
+
+    return results
+
+
+# ======================================================
+# Filter Traces By Status
+# ======================================================
+
+def filter_traces(
+    self,
+    status: TraceStatus,
+) -> List[Trace]:
+    """
+    Return traces matching a status.
+    """
+
+    return [
+        trace
+        for trace in self.traces.values()
+        if trace.status == status
+    ]
+
+
+# ======================================================
+# Filter Spans By Type
+# ======================================================
+
+def filter_spans(
+    self,
+    span_type: SpanType,
+) -> List[Span]:
+    """
+    Return spans matching a span type.
+    """
+
+    return [
+        span
+        for trace in self.traces.values()
+        for span in trace.spans
+        if span.span_type == span_type
+    ]
+
+
+# ======================================================
+# Average Trace Duration
+# ======================================================
+
+def average_trace_duration(
+    self,
+) -> float:
+    """
+    Calculate average trace duration.
+    """
+
+    traces = list(
+        self.traces.values()
+    )
+
+    if not traces:
+
+        return 0.0
+
+    return round(
+        sum(
+            trace.duration_ms
+            for trace in traces
+        ) / len(traces),
+        3,
+    )
+
+
+# ======================================================
+# Average Span Duration
+# ======================================================
+
+def average_span_duration(
+    self,
+) -> float:
+    """
+    Calculate average completed span duration.
+    """
+
+    spans = [
+        span
+        for trace in self.traces.values()
+        for span in trace.spans
+        if span.is_finished
+    ]
+
+    if not spans:
+
+        return 0.0
+
+    return round(
+        sum(
+            span.duration_ms
+            for span in spans
+        ) / len(spans),
+        3,
+    )
+
+
+# ======================================================
+# Span Type Statistics
+# ======================================================
+
+def span_type_statistics(
+    self,
+) -> Dict[str, int]:
+    """
+    Count spans by type.
+    """
+
+    result = {
+        span_type.value: 0
+        for span_type in SpanType
+    }
+
+    for trace in self.traces.values():
+
+        for span in trace.spans:
+
+            result[
+                span.span_type.value
+            ] += 1
+
+    return result
+
+
+# ======================================================
+# Status Statistics
+# ======================================================
+
+def status_statistics(
+    self,
+) -> Dict[str, int]:
+    """
+    Count traces and spans by status.
+    """
+
+    trace_status = {
+        status.value: 0
+        for status in TraceStatus
+    }
+
+    span_status = {
+        status.value: 0
+        for status in TraceStatus
+    }
+
+    for trace in self.traces.values():
+
+        trace_status[
+            trace.status.value
+        ] += 1
+
+        for span in trace.spans:
+
+            span_status[
+                span.status.value
+            ] += 1
+
+    return {
+        "traces":
+            trace_status,
+
+        "spans":
+            span_status,
+    }
+
+
+# ======================================================
+# Diagnostics
+# ======================================================
+
+def diagnostics(
+    self,
+) -> Dict[str, Any]:
+    """
+    Return complete tracer diagnostics.
+    """
+
+    return {
+        "service_name":
+            self.service_name,
+
+        "statistics":
+            self.statistics(),
+
+        "span_types":
+            self.span_type_statistics(),
+
+        "statuses":
+            self.status_statistics(),
+
+        "average_trace_duration_ms":
+            self.average_trace_duration(),
+
+        "average_span_duration_ms":
+            self.average_span_duration(),
+
+        "active_span_ids":
+            list(
+                self.active_spans.keys()
+            ),
+    }
+
+
+# ======================================================
+# Export
+# ======================================================
+
+def export(
+    self,
+) -> Dict[str, Any]:
+    """
+    Export complete tracing information.
+    """
+
+    return {
+        "service_name":
+            self.service_name,
+
+        "statistics":
+            self.statistics(),
+
+        "diagnostics":
+            self.diagnostics(),
+
+        "traces": [
+            trace.to_dict()
+            for trace in self.traces.values()
+        ],
+    }
+
+
+# ======================================================
+# Reset Traces
+# ======================================================
+
+def reset(
+    self,
+) -> None:
+    """
+    Remove all traces and active spans.
+    """
+
+    with self.lock:
+
+        self.traces.clear()
+
+        self.active_spans.clear()
+
+        self.touch()
+
+
+# ======================================================
+# Remove Trace
+# ======================================================
+
+def remove_trace(
+    self,
+    trace_id: str,
+) -> bool:
+    """
+    Remove a trace by ID.
+    """
+
+    with self.lock:
+
+        trace = self.traces.pop(
+            trace_id,
+            None,
+        )
+
+        if trace is None:
+
+            return False
+
+        for span in trace.spans:
+
+            self.active_spans.pop(
+                span.span_id,
+                None,
+            )
+
+        self.touch()
+
+        return True
+
+
+# ======================================================
+# Trace Exists
+# ======================================================
+
+def trace_exists(
+    self,
+    trace_id: str,
+) -> bool:
+    """
+    Check whether a trace exists.
+    """
+
+    return trace_id in self.traces
+
+
+# ======================================================
+# Span Exists
+# ======================================================
+
+def span_exists(
+    self,
+    span_id: str,
+) -> bool:
+    """
+    Check whether a span exists.
+    """
+
+    if span_id in self.active_spans:
+
+        return True
+
+    return any(
+        span_id == span.span_id
+        for trace in self.traces.values()
+        for span in trace.spans
+    )
+
+
+# ======================================================
+# JSON Export
+# ======================================================
+
+def export_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Export traces as JSON.
+    """
+
+    return json.dumps(
+        self.export(),
+        indent=indent,
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+# ======================================================
+# Trace Count
+# ======================================================
+
+@property
+def trace_count(
+    self,
+) -> int:
+    """
+    Number of stored traces.
+    """
+
+    return len(self.traces)
+
+
+# ======================================================
+# Span Count
+# ======================================================
+
+@property
+def span_count(
+    self,
+) -> int:
+    """
+    Number of stored spans.
+    """
+
+    return sum(
+        len(trace.spans)
+        for trace in self.traces.values()
+    )
+
+
+# ======================================================
+# Has Traces
+# ======================================================
+
+@property
+def has_traces(
+    self,
+) -> bool:
+    """
+    Whether tracer contains traces.
+    """
+
+    return bool(self.traces)
