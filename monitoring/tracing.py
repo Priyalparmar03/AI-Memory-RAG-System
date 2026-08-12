@@ -1725,3 +1725,22 @@ def has_traces(
     """
 
     return bool(self.traces)
+
+# ======================================================
+# Context Manager: Trace
+# ======================================================
+
+def trace_context(
+    self,
+    name: str,
+    metadata: Optional[
+        Dict[str, Any]
+    ] = None,
+):
+    """
+    Context manager for a complete trace.
+    """
+
+    tracer = self
+
+   
