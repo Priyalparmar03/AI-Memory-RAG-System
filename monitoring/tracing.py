@@ -1,11 +1,4 @@
-"""
-monitoring/tracing.py
-
-Production Tracing System
-"""
-
 from __future__ import annotations
-
 import json
 import logging
 import threading
