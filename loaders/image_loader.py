@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
-
 import numpy as np
 from PIL import Image
-
 from .base_loader import BaseLoader, LoaderError
 
 logger = logging.getLogger(__name__)
@@ -17,38 +14,15 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 
 class ImageLoader(BaseLoader):
-    """
-    Production Image Loader.
-
-    Supported Formats
-    -----------------
-    JPG
-    JPEG
-    PNG
-    BMP
-    TIFF
-    GIF
-    WEBP
-    """
-
     SUPPORTED_EXTENSIONS = [
-
         ".jpg",
-
         ".jpeg",
-
         ".png",
-
         ".bmp",
-
         ".tiff",
-
         ".tif",
-
         ".gif",
-
         ".webp",
-
     ]
 
     # ======================================================
