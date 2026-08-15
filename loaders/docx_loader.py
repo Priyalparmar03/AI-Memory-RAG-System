@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
 from docx import Document
-
 from .base_loader import BaseLoader, LoaderError
 
 logger = logging.getLogger(__name__)
@@ -16,18 +13,8 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 
 class DOCXLoader(BaseLoader):
-    """
-    Production DOCX Loader.
-
-    Supported Formats
-    -----------------
-    .docx
-    """
-
     SUPPORTED_EXTENSIONS = [
-
         ".docx",
-
     ]
 
     # ======================================================
