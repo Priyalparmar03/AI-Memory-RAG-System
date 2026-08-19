@@ -430,3 +430,565 @@ class TextCleaner:
         )
 
         return text
+
+# ======================================================
+# Remove HTML Tags
+# ======================================================
+
+def remove_html_tags(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove HTML/XML tags from text.
+    """
+
+    text = re.sub(
+        r"<[^>]+>",
+        " ",
+        text,
+    )
+
+    return text
+
+
+# ======================================================
+# Remove URLs
+# ======================================================
+
+def remove_urls(
+    self,
+    text: str,
+    replacement: str = "",
+) -> str:
+    """
+    Remove URLs from text.
+    """
+
+    pattern = (
+        r"https?://"
+        r"(?:www\.)?"
+        r"[^\s<]+"
+    )
+
+    return re.sub(
+        pattern,
+        replacement,
+        text,
+        flags=re.IGNORECASE,
+    )
+
+
+# ======================================================
+# Remove Email Addresses
+# ======================================================
+
+def remove_emails(
+    self,
+    text: str,
+    replacement: str = "",
+) -> str:
+    """
+    Remove email addresses.
+    """
+
+    pattern = (
+        r"\b[A-Za-z0-9._%+-]+"
+        r"@[A-Za-z0-9.-]+"
+        r"\.[A-Za-z]{2,}\b"
+    )
+
+    return re.sub(
+        pattern,
+        replacement,
+        text,
+    )
+
+
+# ======================================================
+# Normalize Quotes
+# ======================================================
+
+def normalize_quotes(
+    self,
+    text: str,
+) -> str:
+    """
+    Normalize common Unicode quotation marks.
+    """
+
+    replacements = {
+        "“": '"',
+        "”": '"',
+        "„": '"',
+        "‟": '"',
+        "‘": "'",
+        "’": "'",
+        "‚": "'",
+        "‛": "'",
+    }
+
+    for old, new in replacements.items():
+
+        text = text.replace(
+            old,
+            new,
+        )
+
+    return text
+
+
+# ======================================================
+# Normalize Dashes
+# ======================================================
+
+def normalize_dashes(
+    self,
+    text: str,
+) -> str:
+    """
+    Normalize different dash characters.
+    """
+
+    replacements = {
+        "–": "-",
+        "—": "-",
+        "―": "-",
+        "‐": "-",
+        "-": "-",
+    }
+
+    for old, new in replacements.items():
+
+        text = text.replace(
+            old,
+            new,
+        )
+
+    return text
+
+
+# ======================================================
+# Remove Repeated Spaces
+# ======================================================
+
+def remove_repeated_spaces(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove repeated spaces.
+    """
+
+    return re.sub(
+        r"[ ]{2,}",
+        " ",
+        text,
+    )
+
+
+# ======================================================
+# Remove Duplicate Lines
+# ======================================================
+
+def remove_duplicate_lines(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove duplicate lines while
+    preserving their original order.
+    """
+
+    lines = text.splitlines()
+
+    seen = set()
+
+    result = []
+
+    removed = 0
+
+    for line in lines:
+
+        normalized = line.strip()
+
+        if not normalized:
+
+            result.append(line)
+
+            continue
+
+        key = normalized.casefold()
+
+        if key in seen:
+
+            removed += 1
+
+            continue
+
+        seen.add(key)
+
+        result.append(line)
+
+    self.statistics[
+        "lines_removed"
+    ] += removed
+
+    return "\n".join(result)
+
+
+# ======================================================
+# Detect Repeated Lines
+# ======================================================
+
+def find_repeated_lines(
+    self,
+    text: str,
+    minimum_occurrences: int = 2,
+) -> List[str]:
+    """
+    Find lines appearing multiple times.
+    """
+
+    counts: Dict[str, int] = {}
+
+    original_lines: Dict[str, str] = {}
+
+    for line in text.splitlines():
+
+        normalized = line.strip()
+
+        if not normalized:
+
+            continue
+
+        key = normalized.casefold()
+
+        counts[key] = (
+            counts.get(key, 0) + 1
+        )
+
+        original_lines[key] = normalized
+
+    return [
+        original_lines[key]
+        for key, count in counts.items()
+        if count >= minimum_occurrences
+    ]
+
+
+# ======================================================
+# Remove Repeated Headers and Footers
+# ======================================================
+
+def remove_repeated_headers_footers(
+    self,
+    text: str,
+    minimum_occurrences: int = 3,
+) -> str:
+    """
+    Remove lines that repeatedly occur
+    throughout a document.
+
+    Useful for PDF-extracted page headers
+    and footers.
+    """
+
+    repeated = set(
+        line.casefold()
+        for line in self.find_repeated_lines(
+            text,
+            minimum_occurrences,
+        )
+    )
+
+    if not repeated:
+
+        return text
+
+    lines = text.splitlines()
+
+    result = []
+
+    removed = 0
+
+    for line in lines:
+
+        if line.strip().casefold() in repeated:
+
+            removed += 1
+
+            continue
+
+        result.append(line)
+
+    self.statistics[
+        "lines_removed"
+    ] += removed
+
+    return "\n".join(result)
+
+
+# ======================================================
+# OCR Noise Cleanup
+# ======================================================
+
+def clean_ocr_noise(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove common OCR extraction noise.
+    """
+
+    replacements = {
+        "\u00ad": "",
+        "\ufeff": "",
+        "ﬁ": "fi",
+        "ﬂ": "fl",
+        "ﬀ": "ff",
+        "ﬃ": "ffi",
+        "ﬄ": "ffl",
+    }
+
+    for old, new in replacements.items():
+
+        text = text.replace(
+            old,
+            new,
+        )
+
+    # Remove spaces accidentally inserted
+    # between individual characters.
+    text = re.sub(
+        r"(?<=\b[A-Za-z])\s+(?=[A-Za-z]\b)",
+        " ",
+        text,
+    )
+
+    return text
+
+
+# ======================================================
+# Remove Page Numbers
+# ======================================================
+
+def remove_page_numbers(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove lines containing simple page numbers.
+    """
+
+    lines = text.splitlines()
+
+    result = []
+
+    removed = 0
+
+    for line in lines:
+
+        stripped = line.strip()
+
+        if re.fullmatch(
+            r"(?:page\s+)?\d+",
+            stripped,
+            flags=re.IGNORECASE,
+        ):
+
+            removed += 1
+
+            continue
+
+        result.append(line)
+
+    self.statistics[
+        "lines_removed"
+    ] += removed
+
+    return "\n".join(result)
+
+
+# ======================================================
+# Remove Excessive Punctuation
+# ======================================================
+
+def normalize_punctuation(
+    self,
+    text: str,
+) -> str:
+    """
+    Normalize excessive punctuation.
+    """
+
+    text = re.sub(
+        r"!{2,}",
+        "!",
+        text,
+    )
+
+    text = re.sub(
+        r"\?{2,}",
+        "?",
+        text,
+    )
+
+    text = re.sub(
+        r"\.{4,}",
+        "...",
+        text,
+    )
+
+    return text
+
+
+# ======================================================
+# Apply Custom Regex Rule
+# ======================================================
+
+def add_rule(
+    self,
+    pattern: str,
+    replacement: str = "",
+    flags: int = 0,
+    name: str = "",
+) -> None:
+    """
+    Add a custom regex cleaning rule.
+    """
+
+    try:
+
+        re.compile(
+            pattern,
+            flags,
+        )
+
+    except re.error as exc:
+
+        raise CleaningError(
+            f"Invalid regex rule: {exc}"
+        ) from exc
+
+    self.rules.append(
+        {
+            "pattern": pattern,
+            "replacement": replacement,
+            "flags": flags,
+            "name": name or pattern,
+        }
+    )
+
+
+# ======================================================
+# Apply Custom Rules
+# ======================================================
+
+def apply_rules(
+    self,
+    text: str,
+) -> str:
+    """
+    Apply registered custom cleaning rules.
+    """
+
+    for rule in self.rules:
+
+        text = re.sub(
+            rule["pattern"],
+            rule["replacement"],
+            text,
+            flags=rule["flags"],
+        )
+
+    return text
+
+
+# ======================================================
+# Advanced Cleaning Pipeline
+# ======================================================
+
+def clean_advanced(
+    self,
+    text: str,
+    remove_links: bool = False,
+    remove_email_addresses: bool = False,
+    remove_duplicates: bool = False,
+    remove_page_numbers: bool = False,
+    remove_headers_footers: bool = False,
+    clean_ocr: bool = True,
+) -> str:
+    """
+    Apply advanced document cleaning.
+    """
+
+    text = self.clean_basic(
+        text
+    )
+
+    text = self.remove_html_tags(
+        text
+    )
+
+    text = self.normalize_quotes(
+        text
+    )
+
+    text = self.normalize_dashes(
+        text
+    )
+
+    if remove_links:
+
+        text = self.remove_urls(
+            text
+        )
+
+    if remove_email_addresses:
+
+        text = self.remove_emails(
+            text
+        )
+
+    if clean_ocr:
+
+        text = self.clean_ocr_noise(
+            text
+        )
+
+    text = self.normalize_punctuation(
+        text
+    )
+
+    if remove_page_numbers:
+
+        text = self.remove_page_numbers(
+            text
+        )
+
+    if remove_headers_footers:
+
+        text = self.remove_repeated_headers_footers(
+            text
+        )
+
+    if remove_duplicates:
+
+        text = self.remove_duplicate_lines(
+            text
+        )
+
+    text = self.apply_rules(
+        text
+    )
+
+    text = self.normalize_whitespace(
+        text
+    )
+
+    text = self.collapse_newlines(
+        text
+    )
+
+    return text.strip()
