@@ -1580,3 +1580,543 @@ def to_json(
         ensure_ascii=False,
         default=str,
     )
+
+# ======================================================
+# Clean File
+# ======================================================
+
+def clean_file(
+    self,
+    file_path: str,
+    output_path: Optional[str] = None,
+    encoding: str = "utf-8",
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Read, clean, and optionally write a text file.
+    """
+
+    path = Path(file_path)
+
+    if not path.exists():
+
+        raise CleaningError(
+            f"File not found: {file_path}"
+        )
+
+    if not path.is_file():
+
+        raise CleaningError(
+            f"Not a file: {file_path}"
+        )
+
+    try:
+
+        text = path.read_text(
+            encoding=encoding
+        )
+
+    except UnicodeDecodeError as exc:
+
+        raise CleaningError(
+            f"Unable to decode file: {file_path}"
+        ) from exc
+
+    result = self.clean_document(
+        text,
+        **kwargs,
+    )
+
+    if output_path:
+
+        output = Path(output_path)
+
+        output.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        output.write_text(
+            result["text"],
+            encoding=encoding,
+        )
+
+        result["output_path"] = str(
+            output
+        )
+
+    result["file_path"] = str(
+        path
+    )
+
+    return result
+
+
+# ======================================================
+# Save Text
+# ======================================================
+
+def save_text(
+    self,
+    text: str,
+    output_path: str,
+    encoding: str = "utf-8",
+) -> str:
+    """
+    Save cleaned text to a file.
+    """
+
+    output = Path(output_path)
+
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    output.write_text(
+        text,
+        encoding=encoding,
+    )
+
+    return str(output)
+
+
+# ======================================================
+# Update Configuration
+# ======================================================
+
+def update_config(
+    self,
+    **kwargs,
+) -> None:
+    """
+    Update cleaner configuration.
+    """
+
+    for key, value in kwargs.items():
+
+        if not hasattr(
+            self.config,
+            key,
+        ):
+
+            raise CleaningError(
+                f"Unknown configuration: {key}"
+            )
+
+        setattr(
+            self.config,
+            key,
+            value,
+        )
+
+
+# ======================================================
+# Get Configuration
+# ======================================================
+
+def get_config(
+    self,
+) -> Dict[str, Any]:
+    """
+    Return cleaner configuration.
+    """
+
+    return {
+        "normalize_unicode":
+            self.config.normalize_unicode,
+
+        "normalize_whitespace":
+            self.config.normalize_whitespace,
+
+        "remove_extra_spaces":
+            self.config.remove_extra_spaces,
+
+        "remove_empty_lines":
+            self.config.remove_empty_lines,
+
+        "strip_lines":
+            self.config.strip_lines,
+
+        "preserve_paragraphs":
+            self.config.preserve_paragraphs,
+
+        "decode_html_entities":
+            self.config.decode_html_entities,
+
+        "remove_control_characters":
+            self.config.remove_control_characters,
+
+        "collapse_newlines":
+            self.config.collapse_newlines,
+
+        "max_consecutive_newlines":
+            self.config.max_consecutive_newlines,
+
+        "min_text_length":
+            self.config.min_text_length,
+
+        "metadata":
+            self.config.metadata,
+    }
+
+
+# ======================================================
+# Reset Statistics
+# ======================================================
+
+def reset_statistics(
+    self,
+) -> None:
+    """
+    Reset cleaning statistics.
+    """
+
+    self.statistics = {
+        "documents_cleaned": 0,
+        "characters_before": 0,
+        "characters_after": 0,
+        "lines_removed": 0,
+        "spaces_removed": 0,
+        "control_characters_removed": 0,
+    }
+
+
+# ======================================================
+# Clear Rules
+# ======================================================
+
+def clear_rules(
+    self,
+) -> None:
+    """
+    Remove all custom cleaning rules.
+    """
+
+    self.rules.clear()
+
+
+# ======================================================
+# Rule Count
+# ======================================================
+
+@property
+def rule_count(
+    self,
+) -> int:
+    """
+    Number of custom rules.
+    """
+
+    return len(
+        self.rules
+    )
+
+
+# ======================================================
+# Documents Cleaned
+# ======================================================
+
+@property
+def documents_cleaned(
+    self,
+) -> int:
+    """
+    Number of documents processed.
+    """
+
+    return self.statistics[
+        "documents_cleaned"
+    ]
+
+
+# ======================================================
+# Characters Removed
+# ======================================================
+
+@property
+def characters_removed(
+    self,
+) -> int:
+    """
+    Number of characters removed.
+    """
+
+    return max(
+        0,
+        self.statistics[
+            "characters_before"
+        ]
+        -
+        self.statistics[
+            "characters_after"
+        ],
+    )
+
+
+# ======================================================
+# Cleanup
+# ======================================================
+
+def cleanup(
+    self,
+) -> None:
+    """
+    Release cleaner resources.
+    """
+
+    self.clear_rules()
+
+    self.reset_statistics()
+
+    logger.info(
+        "Text cleaner cleaned up."
+    )
+
+
+# ======================================================
+# Context Manager
+# ======================================================
+
+def __enter__(
+    self,
+):
+    """
+    Context manager entry.
+    """
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Context manager exit.
+    """
+
+    self.cleanup()
+
+
+# ======================================================
+# String Representation
+# ======================================================
+
+def __repr__(
+    self,
+):
+    """
+    Developer representation.
+    """
+
+    return (
+        "TextCleaner("
+        f"rules={self.rule_count}, "
+        f"documents={self.documents_cleaned}"
+        ")"
+    )
+
+
+# ======================================================
+# Human Readable
+# ======================================================
+
+def __str__(
+    self,
+):
+    """
+    Human-readable representation.
+    """
+
+    return (
+        f"TextCleaner "
+        f"({self.documents_cleaned} documents cleaned)"
+    )
+
+
+# ======================================================
+# Length
+# ======================================================
+
+def __len__(
+    self,
+):
+    """
+    Number of registered cleaning rules.
+    """
+
+    return self.rule_count
+
+
+# ======================================================
+# Iterator
+# ======================================================
+
+def __iter__(
+    self,
+):
+    """
+    Iterate over cleaning rules.
+    """
+
+    return iter(
+        self.rules
+    )
+
+
+# ======================================================
+# Get Rule
+# ======================================================
+
+def __getitem__(
+    self,
+    index: int,
+):
+    """
+    Access a custom rule.
+    """
+
+    return self.rules[
+        index
+    ]
+
+
+# ======================================================
+# Contains
+# ======================================================
+
+def __contains__(
+    self,
+    name: str,
+):
+    """
+    Check whether a named rule exists.
+    """
+
+    return any(
+        rule["name"] == name
+        for rule in self.rules
+    )
+
+
+# ======================================================
+# Boolean
+# ======================================================
+
+def __bool__(
+    self,
+):
+    """
+    Whether cleaner is configured.
+    """
+
+    return (
+        self.config is not None
+    )
+
+
+# ======================================================
+# Factory Methods
+# ======================================================
+
+@classmethod
+def development(
+    cls,
+) -> "TextCleaner":
+    """
+    Development cleaner.
+    """
+
+    return cls(
+        CleaningConfig(
+            normalize_unicode=True,
+            normalize_whitespace=True,
+            remove_empty_lines=True,
+        )
+    )
+
+
+@classmethod
+def production(
+    cls,
+) -> "TextCleaner":
+    """
+    Production cleaner.
+    """
+
+    return cls(
+        CleaningConfig(
+            normalize_unicode=True,
+            normalize_whitespace=True,
+            remove_empty_lines=True,
+            remove_control_characters=True,
+            collapse_newlines=True,
+        )
+    )
+
+
+@classmethod
+def minimal(
+    cls,
+) -> "TextCleaner":
+    """
+    Minimal cleaner.
+    """
+
+    return cls(
+        CleaningConfig(
+            normalize_unicode=True,
+            normalize_whitespace=False,
+            remove_empty_lines=False,
+            strip_lines=False,
+            collapse_newlines=False,
+        )
+    )
+
+
+# ======================================================
+# Module-Level Cleaner
+# ======================================================
+
+cleaner = TextCleaner()
+
+
+# ======================================================
+# Convenience Function
+# ======================================================
+
+def clean_text(
+    text: str,
+    **kwargs,
+) -> str:
+    """
+    Clean text using the default cleaner.
+    """
+
+    return cleaner.clean_advanced(
+        text,
+        **kwargs,
+    )
+
+
+# ======================================================
+# Convenience File Function
+# ======================================================
+
+def clean_file(
+    file_path: str,
+    output_path: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Clean a file using the default cleaner.
+    """
+
+    return cleaner.clean_file(
+        file_path,
+        output_path,
+        **kwargs,
+    )
