@@ -308,3 +308,107 @@ class MetadataExtractor:
         metadata.size = path.stat().st_size
 
         return metadata
+
+    @staticmethod
+    def save(
+        metadata: Metadata,
+        output_path: str,
+        indent: int = 2,
+    ) -> str:
+        """Save metadata as JSON."""
+
+        path = Path(output_path)
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        path.write_text(
+            MetadataExtractor.to_json(
+                metadata,
+                indent,
+            ),
+            encoding="utf-8",
+        )
+
+        return str(path)
+
+    @classmethod
+    def extract_many(
+        cls,
+        directory: str,
+        recursive: bool = False,
+    ) -> list[Metadata]:
+        """Extract metadata from files in a directory."""
+
+        root = Path(directory)
+
+        if not root.is_dir():
+            raise NotADirectoryError(directory)
+
+        files = (
+            root.rglob("*")
+            if recursive
+            else root.glob("*")
+        )
+
+        return [
+            cls.extract(str(path))
+            for path in files
+            if path.is_file()
+        ]
+
+    @staticmethod
+    def cleanup(metadata: Metadata) -> None:
+        """Clear custom metadata."""
+
+        metadata.extra.clear()
+
+    @classmethod
+    def from_file(
+        cls,
+        file_path: str,
+    ) -> Metadata:
+        """Convenience alias for extract()."""
+
+        return cls.extract(file_path)
+
+
+# ==========================================================
+# Convenience Functions
+# ==========================================================
+
+def extract_metadata(
+    file_path: str,
+) -> Metadata:
+    """Extract metadata from a file."""
+
+    return MetadataExtractor.extract(
+        file_path
+    )
+
+
+def metadata_report(
+    file_path: str,
+) -> Dict[str, Any]:
+    """Return a complete metadata report."""
+
+    metadata = extract_metadata(file_path)
+
+    return MetadataExtractor.report(
+        metadata
+    )
+
+
+def metadata_json(
+    file_path: str,
+    indent: int = 2,
+) -> str:
+    """Return file metadata as JSON."""
+
+    metadata = extract_metadata(file_path)
+
+    return MetadataExtractor.to_json(
+        metadata,
+        indent,
+    )
