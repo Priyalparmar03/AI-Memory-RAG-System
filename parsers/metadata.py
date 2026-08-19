@@ -123,3 +123,96 @@ class MetadataExtractor:
         }
 
         return Metadata(**values)
+
+    @classmethod
+    def update_file(
+        cls,
+        metadata: Metadata,
+        file_path: str,
+        refresh_checksum: bool = True,
+    ) -> Metadata:
+        """Refresh metadata from a file."""
+
+        path = Path(file_path)
+
+        if not path.is_file():
+            raise FileNotFoundError(file_path)
+
+        stat = path.stat()
+        mime, _ = mimetypes.guess_type(path.name)
+
+        metadata.update(
+            filename=path.name,
+            path=str(path.resolve()),
+            extension=path.suffix.lower(),
+            mime_type=mime or "application/octet-stream",
+            size=stat.st_size,
+            modified_at=datetime.fromtimestamp(
+                stat.st_mtime
+            ).isoformat(),
+        )
+
+        if refresh_checksum:
+            metadata.checksum = cls.checksum(path)
+
+        return metadata
+
+    @staticmethod
+    def merge(
+        metadata: Metadata,
+        values: Dict[str, Any],
+    ) -> Metadata:
+        """Merge additional metadata."""
+
+        metadata.update(**values)
+        return metadata
+
+    @staticmethod
+    def file_size(
+        file_path: str,
+    ) -> int:
+        """Return file size in bytes."""
+
+        return Path(file_path).stat().st_size
+
+    @staticmethod
+    def mime_type(
+        file_path: str,
+    ) -> str:
+        """Detect MIME type."""
+
+        mime, _ = mimetypes.guess_type(
+            str(file_path)
+        )
+
+        return mime or "application/octet-stream"
+
+    @staticmethod
+    def extension(
+        file_path: str,
+    ) -> str:
+        """Return normalized file extension."""
+
+        return Path(file_path).suffix.lower()
+
+    @classmethod
+    def refresh_checksum(
+        cls,
+        metadata: Metadata,
+    ) -> Metadata:
+        """Recalculate checksum for existing metadata."""
+
+        if not metadata.path:
+            raise ValueError(
+                "Metadata does not contain a file path."
+            )
+
+        path = Path(metadata.path)
+
+        if not path.is_file():
+            raise FileNotFoundError(metadata.path)
+
+        metadata.checksum = cls.checksum(path)
+        metadata.size = path.stat().st_size
+
+        return metadata
