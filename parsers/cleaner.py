@@ -992,3 +992,591 @@ def clean_advanced(
     )
 
     return text.strip()
+
+# ======================================================
+# Normalize Paragraphs
+# ======================================================
+
+def normalize_paragraphs(
+    self,
+    text: str,
+) -> str:
+    """
+    Normalize paragraph structure while
+    preserving paragraph boundaries.
+    """
+
+    paragraphs = re.split(
+        r"\n\s*\n+",
+        text,
+    )
+
+    cleaned = []
+
+    for paragraph in paragraphs:
+
+        paragraph = paragraph.strip()
+
+        if not paragraph:
+
+            continue
+
+        paragraph = re.sub(
+            r"\s+",
+            " ",
+            paragraph,
+        )
+
+        cleaned.append(
+            paragraph
+        )
+
+    separator = (
+        "\n\n"
+        if self.config.preserve_paragraphs
+        else "\n"
+    )
+
+    return separator.join(
+        cleaned
+    )
+
+
+# ======================================================
+# Normalize Sentences
+# ======================================================
+
+def normalize_sentences(
+    self,
+    text: str,
+) -> str:
+    """
+    Normalize whitespace around sentences.
+    """
+
+    text = re.sub(
+        r"\s+([,.!?;:])",
+        r"\1",
+        text,
+    )
+
+    text = re.sub(
+        r"([.!?])([A-Za-z])",
+        r"\1 \2",
+        text,
+    )
+
+    text = re.sub(
+        r" {2,}",
+        " ",
+        text,
+    )
+
+    return text.strip()
+
+
+# ======================================================
+# Split Paragraphs
+# ======================================================
+
+def split_paragraphs(
+    self,
+    text: str,
+) -> List[str]:
+    """
+    Split cleaned text into paragraphs.
+    """
+
+    return [
+        paragraph.strip()
+        for paragraph in re.split(
+            r"\n\s*\n+",
+            text,
+        )
+        if paragraph.strip()
+    ]
+
+
+# ======================================================
+# Split Sentences
+# ======================================================
+
+def split_sentences(
+    self,
+    text: str,
+) -> List[str]:
+    """
+    Basic sentence segmentation.
+    """
+
+    text = self.normalize_sentences(
+        text
+    )
+
+    sentences = re.split(
+        r"(?<=[.!?])\s+",
+        text,
+    )
+
+    return [
+        sentence.strip()
+        for sentence in sentences
+        if sentence.strip()
+    ]
+
+
+# ======================================================
+# Remove Blank Characters
+# ======================================================
+
+def remove_blank_characters(
+    self,
+    text: str,
+) -> str:
+    """
+    Remove zero-width and invisible characters.
+    """
+
+    characters = (
+        "\u200b",
+        "\u200c",
+        "\u200d",
+        "\ufeff",
+        "\u2060",
+    )
+
+    for character in characters:
+
+        text = text.replace(
+            character,
+            "",
+        )
+
+    return text
+
+
+# ======================================================
+# Replace Text
+# ======================================================
+
+def replace_text(
+    self,
+    text: str,
+    replacements: Dict[str, str],
+) -> str:
+    """
+    Apply literal text replacements.
+    """
+
+    for old, new in replacements.items():
+
+        text = text.replace(
+            old,
+            new,
+        )
+
+    return text
+
+
+# ======================================================
+# Batch Cleaning
+# ======================================================
+
+def clean_batch(
+    self,
+    texts: List[str],
+    advanced: bool = True,
+    **kwargs,
+) -> List[str]:
+    """
+    Clean multiple text documents.
+    """
+
+    cleaned = []
+
+    for text in texts:
+
+        if advanced:
+
+            result = self.clean_advanced(
+                text,
+                **kwargs,
+            )
+
+        else:
+
+            result = self.clean_basic(
+                text
+            )
+
+        cleaned.append(
+            result
+        )
+
+    return cleaned
+
+
+# ======================================================
+# Cleaning Report
+# ======================================================
+
+def cleaning_report(
+    self,
+) -> Dict[str, Any]:
+    """
+    Return cleaning statistics.
+    """
+
+    before = self.statistics[
+        "characters_before"
+    ]
+
+    after = self.statistics[
+        "characters_after"
+    ]
+
+    removed = max(
+        0,
+        before - after,
+    )
+
+    reduction = (
+        (removed / before) * 100
+        if before
+        else 0.0
+    )
+
+    return {
+        "documents_cleaned":
+            self.statistics[
+                "documents_cleaned"
+            ],
+
+        "characters_before":
+            before,
+
+        "characters_after":
+            after,
+
+        "characters_removed":
+            removed,
+
+        "reduction_percent":
+            round(
+                reduction,
+                2,
+            ),
+
+        "lines_removed":
+            self.statistics[
+                "lines_removed"
+            ],
+
+        "spaces_removed":
+            self.statistics[
+                "spaces_removed"
+            ],
+
+        "control_characters_removed":
+            self.statistics[
+                "control_characters_removed"
+            ],
+
+        "custom_rules":
+            len(self.rules),
+    }
+
+
+# ======================================================
+# Text Statistics
+# ======================================================
+
+def text_statistics(
+    self,
+    text: str,
+) -> Dict[str, Any]:
+    """
+    Calculate text statistics.
+    """
+
+    words = re.findall(
+        r"\b\w+\b",
+        text,
+        flags=re.UNICODE,
+    )
+
+    sentences = self.split_sentences(
+        text
+    )
+
+    paragraphs = self.split_paragraphs(
+        text
+    )
+
+    lines = [
+        line
+        for line in text.splitlines()
+        if line.strip()
+    ]
+
+    return {
+        "characters":
+            len(text),
+
+        "characters_without_spaces":
+            len(
+                re.sub(
+                    r"\s+",
+                    "",
+                    text,
+                )
+            ),
+
+        "words":
+            len(words),
+
+        "sentences":
+            len(sentences),
+
+        "paragraphs":
+            len(paragraphs),
+
+        "lines":
+            len(lines),
+
+        "average_word_length":
+            round(
+                sum(
+                    len(word)
+                    for word in words
+                ) / len(words),
+                2,
+            )
+            if words
+            else 0.0,
+
+        "average_sentence_length":
+            round(
+                len(words)
+                / len(sentences),
+                2,
+            )
+            if sentences
+            else 0.0,
+    }
+
+
+# ======================================================
+# Validate Cleaned Text
+# ======================================================
+
+def validate_cleaned_text(
+    self,
+    text: str,
+) -> Dict[str, Any]:
+    """
+    Validate the quality of cleaned text.
+    """
+
+    stripped = text.strip()
+
+    return {
+        "valid":
+            bool(stripped),
+
+        "empty":
+            not bool(stripped),
+
+        "character_count":
+            len(stripped),
+
+        "word_count":
+            len(
+                re.findall(
+                    r"\b\w+\b",
+                    stripped,
+                    flags=re.UNICODE,
+                )
+            ),
+
+        "has_html":
+            bool(
+                re.search(
+                    r"<[^>]+>",
+                    stripped,
+                )
+            ),
+
+        "has_urls":
+            bool(
+                re.search(
+                    r"https?://\S+",
+                    stripped,
+                )
+            ),
+
+        "has_excessive_spaces":
+            bool(
+                re.search(
+                    r"[ \t]{2,}",
+                    stripped,
+                )
+            ),
+
+        "has_excessive_newlines":
+            bool(
+                re.search(
+                    r"\n{3,}",
+                    stripped,
+                )
+            ),
+    }
+
+
+# ======================================================
+# Clean Document
+# ======================================================
+
+def clean_document(
+    self,
+    text: str,
+    replacements: Optional[
+        Dict[str, str]
+    ] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Clean a complete document and return
+    the text together with diagnostics.
+    """
+
+    original = text
+
+    cleaned = self.clean_advanced(
+        text,
+        **kwargs,
+    )
+
+    cleaned = self.remove_blank_characters(
+        cleaned
+    )
+
+    if replacements:
+
+        cleaned = self.replace_text(
+            cleaned,
+            replacements,
+        )
+
+    cleaned = self.normalize_paragraphs(
+        cleaned
+    )
+
+    cleaned = self.normalize_sentences(
+        cleaned
+    )
+
+    return {
+        "text":
+            cleaned,
+
+        "original_length":
+            len(original),
+
+        "cleaned_length":
+            len(cleaned),
+
+        "statistics":
+            self.text_statistics(
+                cleaned
+            ),
+
+        "validation":
+            self.validate_cleaned_text(
+                cleaned
+            ),
+
+        "report":
+            self.cleaning_report(),
+    }
+
+
+# ======================================================
+# Serialization
+# ======================================================
+
+def to_dict(
+    self,
+) -> Dict[str, Any]:
+    """
+    Serialize cleaner configuration and state.
+    """
+
+    return {
+        "config": {
+            "normalize_unicode":
+                self.config.normalize_unicode,
+
+            "normalize_whitespace":
+                self.config.normalize_whitespace,
+
+            "remove_extra_spaces":
+                self.config.remove_extra_spaces,
+
+            "remove_empty_lines":
+                self.config.remove_empty_lines,
+
+            "strip_lines":
+                self.config.strip_lines,
+
+            "preserve_paragraphs":
+                self.config.preserve_paragraphs,
+
+            "decode_html_entities":
+                self.config.decode_html_entities,
+
+            "remove_control_characters":
+                self.config.remove_control_characters,
+
+            "collapse_newlines":
+                self.config.collapse_newlines,
+
+            "max_consecutive_newlines":
+                self.config.max_consecutive_newlines,
+
+            "min_text_length":
+                self.config.min_text_length,
+
+            "metadata":
+                self.config.metadata,
+        },
+
+        "rules":
+            self.rules,
+
+        "statistics":
+            self.statistics,
+
+        "report":
+            self.cleaning_report(),
+    }
+
+
+# ======================================================
+# JSON Serialization
+# ======================================================
+
+def to_json(
+    self,
+    indent: int = 4,
+) -> str:
+    """
+    Serialize cleaner state to JSON.
+    """
+
+    return json.dumps(
+        self.to_dict(),
+        indent=indent,
+        ensure_ascii=False,
+        default=str,
+    )
