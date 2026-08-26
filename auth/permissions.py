@@ -1,87 +1,51 @@
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
 
-# ==========================================================
-# Exceptions
-# ==========================================================
-
 class PermissionError(Exception):
     """Raised when permission checks fail."""
 
-
-# ==========================================================
 # Permission Names
-# ==========================================================
-
 class Permissions:
 
     USERS_READ = "users:read"
     USERS_WRITE = "users:write"
     USERS_DELETE = "users:delete"
-
     DOCUMENT_READ = "document:read"
     DOCUMENT_WRITE = "document:write"
     DOCUMENT_DELETE = "document:delete"
-
     MEMORY_READ = "memory:read"
     MEMORY_WRITE = "memory:write"
 
     CHAT = "chat"
-
     RAG_QUERY = "rag:query"
-
     EMBEDDING_CREATE = "embedding:create"
-
     ANALYTICS_READ = "analytics:read"
-
     ADMIN = "admin"
 
 
-# ==========================================================
 # Role Definition
-# ==========================================================
-
 @dataclass(slots=True)
 class Role:
-
     name: str
-
     permissions: Set[str] = field(default_factory=set)
 
-
-# ==========================================================
 # RBAC Manager
-# ==========================================================
-
 class PermissionManager:
 
     def __init__(self):
-
         self.roles: Dict[str, Role] = {}
-
         self._initialize_roles()
 
-    # ------------------------------------------------------
     # Default Roles
-    # ------------------------------------------------------
-
     def _initialize_roles(self):
-
         self.roles["viewer"] = Role(
-
             name="viewer",
-
             permissions={
-
                 Permissions.DOCUMENT_READ,
-
                 Permissions.MEMORY_READ,
-
                 Permissions.CHAT,
-
                 Permissions.RAG_QUERY,
 
             },
@@ -89,21 +53,13 @@ class PermissionManager:
         )
 
         self.roles["user"] = Role(
-
             name="user",
-
             permissions={
-
-                Permissions.DOCUMENT_READ,
-
+                Permissions.DOCUMENT_READ
                 Permissions.DOCUMENT_WRITE,
-
                 Permissions.MEMORY_READ,
-
                 Permissions.MEMORY_WRITE,
-
                 Permissions.CHAT,
-
                 Permissions.RAG_QUERY,
 
             },
