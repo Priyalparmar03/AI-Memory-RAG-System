@@ -1,26 +1,16 @@
 from __future__ import annotations
-
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
-
 import jwt
 from jwt import ExpiredSignatureError, InvalidTokenError
 
-
-# ==========================================================
 # Exceptions
-# ==========================================================
-
 class JWTError(Exception):
     """Base JWT exception."""
 
-
-# ==========================================================
 # Configuration
-# ==========================================================
-
 @dataclass(slots=True)
 class JWTConfig:
     secret_key: str
@@ -32,11 +22,7 @@ class JWTConfig:
     issuer: str = "AI-Memory-RAG"
     audience: str = "AI-Memory-RAG-Users"
 
-
-# ==========================================================
 # JWT Handler
-# ==========================================================
-
 class JWTHandler:
 
     def __init__(
@@ -46,10 +32,7 @@ class JWTHandler:
 
         self.config = config
 
-    # ------------------------------------------------------
     # Access Token
-    # ------------------------------------------------------
-
     def create_access_token(
         self,
         user_id: str,
@@ -86,11 +69,7 @@ class JWTHandler:
             self.config.secret_key,
             algorithm=self.config.algorithm,
         )
-
-    # ------------------------------------------------------
     # Refresh Token
-    # ------------------------------------------------------
-
     def create_refresh_token(
         self,
         user_id: str,
@@ -118,10 +97,7 @@ class JWTHandler:
             algorithm=self.config.algorithm,
         )
 
-    # ------------------------------------------------------
     # Decode
-    # ------------------------------------------------------
-
     def decode_token(
         self,
         token: str,
@@ -138,17 +114,11 @@ class JWTHandler:
             )
 
         except ExpiredSignatureError as exc:
-
             raise JWTError("Token has expired.") from exc
-
-        except InvalidTokenError as exc:
-
+        except InvalidTokenError as exc
             raise JWTError("Invalid token.") from exc
 
-    # ------------------------------------------------------
     # Verify
-    # ------------------------------------------------------
-
     def verify_token(
         self,
         token: str,
@@ -156,21 +126,15 @@ class JWTHandler:
     ) -> Dict[str, Any]:
 
         payload = self.decode_token(token)
-
         if token_type:
-
             if payload.get("type") != token_type:
-
                 raise JWTError(
                     f"Expected {token_type} token."
                 )
 
         return payload
 
-    # ------------------------------------------------------
     # Refresh Access Token
-    # ------------------------------------------------------
-
     def refresh_access_token(
         self,
         refresh_token: str,
@@ -185,23 +149,15 @@ class JWTHandler:
         )
 
         return self.create_access_token(
-
             user_id=payload["sub"],
-
             email=email,
-
             role=role,
-
             session_id=payload["session_id"],
-
             permissions=permissions,
 
         )
 
-    # ------------------------------------------------------
     # Claims
-    # ------------------------------------------------------
-
     def extract_claims(
         self,
         token: str,
@@ -209,34 +165,25 @@ class JWTHandler:
 
         return self.decode_token(token)
 
-    # ------------------------------------------------------
     # Remaining Lifetime
-    # ------------------------------------------------------
-
     def token_remaining_time(
         self,
         token: str,
     ) -> int:
 
         payload = self.decode_token(token)
-
         exp = datetime.fromtimestamp(
             payload["exp"],
             tz=timezone.utc,
         )
 
         remaining = exp - datetime.now(timezone.utc)
-
         return max(
             0,
             int(remaining.total_seconds()),
         )
 
-    # ------------------------------------------------------
     # JTI
-    # ------------------------------------------------------
-
     @staticmethod
     def generate_jti() -> str:
-
         return uuid.uuid4().hex
