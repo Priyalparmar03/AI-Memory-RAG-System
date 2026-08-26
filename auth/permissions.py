@@ -67,71 +67,43 @@ class PermissionManager:
         )
 
         self.roles["editor"] = Role(
-
             name="editor",
-
             permissions={
-
                 Permissions.DOCUMENT_READ,
-
                 Permissions.DOCUMENT_WRITE,
-
                 Permissions.DOCUMENT_DELETE,
-
                 Permissions.MEMORY_READ,
-
                 Permissions.MEMORY_WRITE,
-
                 Permissions.CHAT,
-
                 Permissions.RAG_QUERY,
-
                 Permissions.EMBEDDING_CREATE,
 
             },
 
         )
 
-        self.roles["admin"] = Role(
-
+        self.roles["admin"] = Role
             name="admin",
-
             permissions={
-
                 Permissions.ADMIN,
-
                 Permissions.USERS_READ,
-
                 Permissions.USERS_WRITE,
-
                 Permissions.USERS_DELETE,
-
                 Permissions.DOCUMENT_READ,
-
                 Permissions.DOCUMENT_WRITE,
-
                 Permissions.DOCUMENT_DELETE,
-
                 Permissions.MEMORY_READ,
-
                 Permissions.MEMORY_WRITE,
-
                 Permissions.CHAT,
-
                 Permissions.RAG_QUERY,
-
                 Permissions.EMBEDDING_CREATE,
-
                 Permissions.ANALYTICS_READ,
 
             },
 
         )
 
-    # ------------------------------------------------------
     # Role Management
-    # ------------------------------------------------------
-
     def add_role(
         self,
         role: Role,
@@ -153,10 +125,7 @@ class PermissionManager:
 
         return self.roles.get(role_name)
 
-    # ------------------------------------------------------
     # Permission Checks
-    # ------------------------------------------------------
-
     def has_permission(
         self,
         role_name: str,
@@ -166,13 +135,9 @@ class PermissionManager:
         role = self.roles.get(role_name)
 
         if role is None:
-
             return False
-
         return (
-
             permission in role.permissions
-
             or Permissions.ADMIN in role.permissions
 
         )
@@ -197,10 +162,7 @@ class PermissionManager:
 
             )
 
-    # ------------------------------------------------------
     # Bulk Operations
-    # ------------------------------------------------------
-
     def permissions_for_role(
         self,
         role_name: str,
