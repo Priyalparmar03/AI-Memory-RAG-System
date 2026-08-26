@@ -1,45 +1,31 @@
 from __future__ import annotations
-
 import hmac
 import re
 import secrets
 import string
 from dataclasses import dataclass
 from typing import List
-
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, InvalidHash
 
-
-# ==========================================================
 # Exceptions
-# ==========================================================
-
 class PasswordError(Exception):
     """Base password exception."""
 
 
-# ==========================================================
 # Password Policy
-# ==========================================================
-
 @dataclass(slots=True)
 class PasswordPolicy:
     min_length: int = 8
     max_length: int = 128
-
     require_uppercase: bool = True
     require_lowercase: bool = True
     require_digit: bool = True
     require_special: bool = True
-
     special_characters: str = "!@#$%^&*()_-+=[]{}|\\:;\"'<>,.?/~`"
 
 
-# ==========================================================
 # Password Manager
-# ==========================================================
-
 class PasswordManager:
 
     def __init__(
@@ -48,13 +34,9 @@ class PasswordManager:
     ) -> None:
 
         self.policy = policy or PasswordPolicy()
-
         self.hasher = PasswordHasher()
 
-    # ------------------------------------------------------
     # Hash
-    # ------------------------------------------------------
-
     def hash_password(
         self,
         password: str,
@@ -64,10 +46,7 @@ class PasswordManager:
 
         return self.hasher.hash(password)
 
-    # ------------------------------------------------------
     # Verify
-    # ------------------------------------------------------
-
     def verify_password(
         self,
         password: str,
@@ -88,10 +67,7 @@ class PasswordManager:
 
             return False
 
-    # ------------------------------------------------------
     # Rehash
-    # ------------------------------------------------------
-
     def needs_rehash(
         self,
         hashed_password: str,
@@ -101,10 +77,7 @@ class PasswordManager:
             hashed_password
         )
 
-    # ------------------------------------------------------
     # Strength Validation
-    # ------------------------------------------------------
-
     def validate_strength(
         self,
         password: str,
@@ -158,10 +131,7 @@ class PasswordManager:
                 "Password requires a special character."
             )
 
-    # ------------------------------------------------------
     # Constant Time Comparison
-    # ------------------------------------------------------
-
     @staticmethod
     def compare_constant_time(
         value1: str,
@@ -173,10 +143,7 @@ class PasswordManager:
             value2,
         )
 
-    # ------------------------------------------------------
     # Random Password
-    # ------------------------------------------------------
-
     def generate_password(
         self,
         length: int = 16,
@@ -189,29 +156,19 @@ class PasswordManager:
         )
 
         while True:
-
             password = "".join(
-
                 secrets.choice(alphabet)
-
                 for _ in range(length)
 
             )
 
             try:
-
                 self.validate_strength(password)
-
                 return password
-
             except PasswordError:
-
                 continue
 
-    # ------------------------------------------------------
     # Password History
-    # ------------------------------------------------------
-
     def in_password_history(
         self,
         password: str,
@@ -228,10 +185,7 @@ class PasswordManager:
 
         return False
 
-    # ------------------------------------------------------
     # Password Expiry Placeholder
-    # ------------------------------------------------------
-
     @staticmethod
     def password_expired(
         days_since_change: int,
